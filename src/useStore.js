@@ -33,7 +33,7 @@ const safeJsonStorage = {
 
 const useStore = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       nodes: [],
       pipes: [],
       selectedObject: null,
@@ -57,9 +57,6 @@ const useStore = create(
         const startNode = state.nodes.find(n => n.id === pipe.startNodeId);
         const endNode = state.nodes.find(n => n.id === pipe.endNodeId);
         if (!startNode || !endNode) return state; // Не добавлять, если узлы не найдены
-
-        // Простое вычисление длины по прямой для примера
-        const length = L.latLng(startNode.lat, startNode.lng).distanceTo(L.latLng(endNode.lat, endNode.lng));
         
         return { 
             pipes: [
@@ -68,7 +65,6 @@ const useStore = create(
                     ...pipe, 
                     id: crypto.randomUUID(), 
                     type: 'pipe', 
-                    length: Math.round(length),
                     diameter: 100, // Значение по умолчанию
                     material: 'steel' // Значение по умолчанию
                 }

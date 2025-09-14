@@ -1,7 +1,7 @@
 import useStore from '../useStore';
 
 const PropertiesPanel = () => {
-  const { selectedObject, setSelectedObject, updateNode, updatePipe, deleteObject, nodes } = useStore();
+  const { selectedObject, setSelectedObject, updateNode, updatePipe, deleteObject } = useStore();
 
   if (!selectedObject) {
     return (
@@ -89,8 +89,8 @@ const PropertiesPanel = () => {
         {isNode ? renderNodeForm() : renderPipeForm()}
         
         <div className="form-buttons">
-            <button type="button" className="close-btn" onClick={handleClose}>Закрыть</button>
-            <button type="button" className="delete-btn" onClick={handleDelete}>Удалить</button>
+          <button type="button" className="close-btn" onClick={handleClose}>Закрыть</button>
+          <button type="button" className="delete-btn" onClick={handleDelete}>Удалить</button>
         </div>
       </form>
     </div>

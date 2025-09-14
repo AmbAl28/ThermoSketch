@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useMap, useMapEvents, Polyline, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import useStore from '../useStore';
@@ -15,7 +15,7 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
   const [startNodeId, setStartNodeId] = useState(null);
   const [snappedNode, setSnappedNode] = useState(null);
 
-  const findNearbyNode = (latlng) => {
+  const findNearbyNode = useCallback((latlng) => {
     let nearestNode = null;
     let minDistance = Infinity;
 
@@ -31,7 +31,7 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
       }
     });
     return nearestNode;
-  };
+  }, [map, nodes]);
 
   const startDrawing = (node) => {
     setIsDrawing(true);
@@ -39,8 +39,16 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
     setCurrentVertices([[node.lat, node.lng]]);
   };
 
+  const resetDrawing = useCallback(() => {
+    setIsDrawing(false);
+    setCurrentVertices([]);
+    setCursorPos(null);
+    setStartNodeId(null);
+    setDrawingMode('none');
+  }, [setDrawingMode]);
+
   // This function now calculates the length before adding the pipe
-  const finishDrawing = (endNode) => {
+  const finishDrawing = useCallback((endNode) => {
     if (!isDrawing || !startNodeId || !endNode || currentVertices.length < 1) {
       resetDrawing();
       return;
@@ -65,15 +73,7 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
     });
 
     resetDrawing();
-  };
-
-  const resetDrawing = () => {
-    setIsDrawing(false);
-    setCurrentVertices([]);
-    setCursorPos(null);
-    setStartNodeId(null);
-    setDrawingMode('none');
-  };
+  }, [isDrawing, startNodeId, currentVertices, addPipe, resetDrawing]);
 
   useMapEvents({
     click(e) {
@@ -127,22 +127,22 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isDrawing) {
+      if (e.key === 'Escape') {
         resetDrawing();
       }
-      if (e.key === 'Enter' && isDrawing && cursorPos) {
+      if (e.key === 'Enter' && cursorPos) {
         const nearbyNode = findNearbyNode(cursorPos);
         if (nearbyNode) {
           finishDrawing(nearbyNode);
         } else {
-          alert('Отрисовка трубы должна заканчиваться на существующем узле.');
+          alert('Отрисовка трубы должна заканчиваться на существующем узle.');
         }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isDrawing, cursorPos]);
+  }, [cursorPos, findNearbyNode, finishDrawing, resetDrawing]);
 
   let rubberBandLine = null;
   if (isDrawing && cursorPos && currentVertices.length > 0) {
