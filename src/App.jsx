@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import './App.css';
-import useStore from './useStore'; // Импортируем useStore
+import useStore from './useStore';
 import Map from './components/Map';
 import DataDisplay from './components/DataDisplay';
 import PropertiesPanel from './components/PropertiesPanel';
@@ -11,12 +11,11 @@ import ImportButton from './components/ImportButton';
 
 function App() {
   const [drawingMode, setDrawingMode] = useState('none');
-  const clearProject = useStore((state) => state.clearProject); // Получаем экшен из хранилища
+  const clearProject = useStore((state) => state.clearProject);
 
   const handleClearProject = () => {
     if (window.confirm('Вы уверены, что хотите полностью очистить проект? Все данные будут удалены.')) {
       clearProject();
-      // Сообщение пользователю
       alert('Проект был успешно очищен.');
     }
   };
@@ -24,25 +23,25 @@ function App() {
   return (
     <div className="App">
       <div className="sidebar">
-        <h2>Панель управления</h2>
+        <h2>Леноблтеплоснаб</h2>
         <div className="controls">
           <button 
             onClick={() => setDrawingMode('point')}
             className={drawingMode === 'point' ? 'active' : ''}
           >
-            Добавить узел
+            📍 Добавить узел
           </button>
           <button 
             onClick={() => setDrawingMode('pipe')}
             className={drawingMode === 'pipe' ? 'active' : ''}
           >
-            Нарисовать трубу
+            〰️ Добавить трубу
           </button>
           <button 
             onClick={() => setDrawingMode('none')}
             className={drawingMode === 'none' ? 'active' : ''}
           >
-            Выбрать
+            🖱️ Выбрать
           </button>
         </div>
         <div className="import-export-controls">
@@ -51,7 +50,6 @@ function App() {
           <ExcelExportButton />
           <DxfExportButton />
         </div>
-        {/* Новая кнопка для очистки */}
         <div className="project-controls">
             <button className="clear-btn" onClick={handleClearProject}>
                 Очистить проект
