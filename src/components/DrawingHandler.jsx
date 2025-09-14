@@ -15,7 +15,6 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
   const [startNodeId, setStartNodeId] = useState(null);
   const [snappedNode, setSnappedNode] = useState(null);
 
-  // --- Helper Function: Find nearest node ---
   const findNearbyNode = (latlng) => {
     let nearestNode = null;
     let minDistance = Infinity;
@@ -34,13 +33,13 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
     return nearestNode;
   };
 
-  // --- Drawing Logic ---
   const startDrawing = (node) => {
     setIsDrawing(true);
     setStartNodeId(node.id);
     setCurrentVertices([[node.lat, node.lng]]);
   };
 
+  // This function now calculates the length before adding the pipe
   const finishDrawing = (endNode) => {
     if (!isDrawing || !startNodeId || !endNode || currentVertices.length < 1) {
       resetDrawing();
@@ -49,11 +48,22 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
 
     const finalVertices = [...currentVertices, [endNode.lat, endNode.lng]];
 
+    // --- Length Calculation Logic is now here ---
+    let totalLength = 0;
+    for (let i = 0; i < finalVertices.length - 1; i++) {
+      const [lat1, lng1] = finalVertices[i];
+      const [lat2, lng2] = finalVertices[i + 1];
+      totalLength += L.latLng(lat1, lng1).distanceTo(L.latLng(lat2, lng2));
+    }
+    
+    // Add the pre-calculated length to the store
     addPipe({
       startNodeId: startNodeId,
       endNodeId: endNode.id,
       vertices: finalVertices,
+      length: Math.round(totalLength), // Pass the calculated length
     });
+
     resetDrawing();
   };
 
@@ -65,31 +75,28 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
     setDrawingMode('none');
   };
 
-  // --- Event Handlers from useMapEvents ---
   useMapEvents({
     click(e) {
-      // 1. Add Point Mode
       if (drawingMode === 'point') {
         addNode({ 
-          id: crypto.randomUUID(), type: 'node', 
+          id: crypto.randomUUID(), 
           lat: e.latlng.lat, lng: e.latlng.lng 
         });
         setDrawingMode('none');
         return;
       }
 
-      // 2. Pipe Drawing Mode
       if (drawingMode === 'pipe') {
         const nearbyNode = findNearbyNode(e.latlng);
 
-        if (!isDrawing) { // First click
+        if (!isDrawing) { 
           if (nearbyNode) {
             startDrawing(nearbyNode);
           } else {
-            alert('Pipe drawing must start from an existing node.');
+            alert('Отрисовка трубы должна начинаться с существующего узла.');
           }
-        } else { // Subsequent clicks
-           if (nearbyNode) { // If we click on a node mid-drawing, it finishes it
+        } else { 
+           if (nearbyNode) {
              finishDrawing(nearbyNode);
            } else {
              setCurrentVertices(prev => [...prev, [e.latlng.lat, e.latlng.lng]]);
@@ -112,13 +119,12 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
             if (nearbyNode) {
                 finishDrawing(nearbyNode);
             } else {
-                alert('Pipe drawing must end on an existing node.');
+                alert('Отрисовка трубы должна заканчиваться на существующем узле.');
             }
         }
     }
   });
 
-  // --- Keyboard Handler ---
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isDrawing) {
@@ -129,7 +135,7 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
         if (nearbyNode) {
           finishDrawing(nearbyNode);
         } else {
-          alert('Pipe drawing must end on an existing node.');
+          alert('Отрисовка трубы должна заканчиваться на существующем узле.');
         }
       }
     };
@@ -138,8 +144,6 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isDrawing, cursorPos]);
 
-
-  // --- Render visual feedback ---
   let rubberBandLine = null;
   if (isDrawing && cursorPos && currentVertices.length > 0) {
     const lastVertex = currentVertices[currentVertices.length - 1];

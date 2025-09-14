@@ -6,8 +6,8 @@ const ExportButton = () => {
 
   const handleExport = () => {
     const exportData = {
-      schema_version: '1.1', // Обновляем версию схемы
-      project_name: 'Thermal Network Project',
+      schema_version: '1.1',
+      project_name: 'Проект тепловой сети',
       nodes: nodes.map(node => ({
         id: node.id,
         name: node.name,
@@ -25,7 +25,7 @@ const ExportButton = () => {
         diameter: pipe.diameter,
         roughness: 0.1, 
         material: pipe.material,
-        vertices: pipe.vertices, // Главное изменение - экспортируем вершины
+        vertices: pipe.vertices,
       })),
     };
 
@@ -35,7 +35,7 @@ const ExportButton = () => {
 
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'thermal-network-config-v1.1.json';
+    a.download = 'config-teploseti-v1.1.json';
     document.body.appendChild(a);
     a.click();
 

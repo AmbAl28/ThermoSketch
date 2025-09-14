@@ -1,86 +1,110 @@
 import { create } from 'zustand';
-import L from 'leaflet';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
-// Helper to calculate length of a polyline
-const calculatePolylineLength = (vertices) => {
-  if (!vertices || vertices.length < 2) return 0;
-  let totalLength = 0;
-  for (let i = 0; i < vertices.length - 1; i++) {
-    const point1 = L.latLng(vertices[i]);
-    const point2 = L.latLng(vertices[i + 1]);
-    totalLength += point1.distanceTo(point2);
-  }
-  return Math.round(totalLength); // distance in meters
+// Кастомный объект для хранения, который перехватывает ошибки парсинга JSON.
+const safeJsonStorage = {
+  getItem: (name) => {
+    const str = localStorage.getItem(name);
+    // Если данных нет, возвращаем null.
+    if (!str) {
+      return null; 
+    }
+    try {
+        // Проверяем, являются ли данные валидным JSON.
+        JSON.parse(str);
+        return str; // Возвращаем строку, если все в порядке.
+    } catch (e) {
+        console.error("Обнаружены поврежденные данные в localStorage, они будут очищены:", e);
+        alert("Не удалось загрузить сохраненные данные. Они будут очищены.");
+        localStorage.removeItem(name); // Удаляем поврежденные данные
+        return null; // Возвращаем null, чтобы Zustand начал с чистого листа.
+    }
+  },
+  setItem: (name, value) => {
+    try {
+      localStorage.setItem(name, value);
+    } catch (e) {
+      console.error("Ошибка записи в localStorage:", e);
+      alert("Не удалось сохранить состояние проекта. Возможно, хранилище переполнено.");
+    }
+  },
+  removeItem: (name) => localStorage.removeItem(name),
 };
 
-const useStore = create((set, get) => ({
-  nodes: [],
-  pipes: [],
-  selectedObject: null,
+const useStore = create(
+  persist(
+    (set, get) => ({
+      nodes: [],
+      pipes: [],
+      selectedObject: null,
 
-  addNode: (nodeData) => {
-    const newNode = { ...nodeData, name: 'New Node', nodeType: 'consumer', elevation: 0 };
-    set((state) => ({ nodes: [...state.nodes, newNode] }));
-  },
-  
-  // addPipe теперь принимает полный объект трубы, включая вершины
-  addPipe: (pipeData) => {
-    const { nodes } = get();
-    const startNode = nodes.find(n => n.id === pipeData.startNodeId);
-    const endNode = nodes.find(n => n.id === pipeData.endNodeId);
+      setNodes: (nodes) => set({ nodes }),
+      setPipes: (pipes) => set({ pipes }),
 
-    if (!startNode || !endNode) {
-      console.error("Pipe creation failed: Start or end node not found.");
-      return;
+      addNode: (node) => set((state) => ({ nodes: [...state.nodes, { ...node, name: `Узел ${state.nodes.length + 1}`, type: 'node' }] })),
+      addPipe: (pipe) => set((state) => {
+        const startNode = state.nodes.find(n => n.id === pipe.startNodeId);
+        const endNode = state.nodes.find(n => n.id === pipe.endNodeId);
+        if (!startNode || !endNode) return state; // Не добавлять, если узлы не найдены
+
+        // Простое вычисление длины по прямой для примера
+        const length = L.latLng(startNode.lat, startNode.lng).distanceTo(L.latLng(endNode.lat, endNode.lng));
+        
+        return { 
+            pipes: [
+                ...state.pipes, 
+                { 
+                    ...pipe, 
+                    id: crypto.randomUUID(), 
+                    type: 'pipe', 
+                    length: Math.round(length),
+                    diameter: 100, // Значение по умолчанию
+                    material: 'steel' // Значение по умолчанию
+                }
+            ]
+        };
+      }),
+
+      updateNode: (id, data) => set((state) => ({ 
+        nodes: state.nodes.map(node => node.id === id ? { ...node, ...data } : node)
+      })),
+
+      updatePipe: (id, data) => set((state) => ({ 
+        pipes: state.pipes.map(pipe => pipe.id === id ? { ...pipe, ...data } : pipe)
+      })),
+
+      setSelectedObject: (object) => set({ selectedObject: object }),
+
+      deleteObject: (object) => set((state) => {
+        if (object.type === 'node') {
+            // Также удаляем все трубы, подключенные к этому узлу
+            const connectedPipes = state.pipes.filter(p => p.startNodeId === object.id || p.endNodeId === object.id).map(p => p.id);
+            return {
+                nodes: state.nodes.filter(n => n.id !== object.id),
+                pipes: state.pipes.filter(p => !connectedPipes.includes(p.id)),
+                selectedObject: null,
+            }
+        } else { // type === 'pipe'
+            return {
+                pipes: state.pipes.filter(p => p.id !== object.id),
+                selectedObject: null,
+            }
+        }
+      }),
+
+      // Новый экшен для полной очистки проекта
+      clearProject: () => {
+        // Просто сбрасываем состояние. Middleware `persist` автоматически очистит localStorage.
+        set({ nodes: [], pipes: [], selectedObject: null });
+      },
+    }),
+    {
+      name: 'thermal-network-storage', // Имя ключа в localStorage
+      storage: createJSONStorage(() => safeJsonStorage), // Используем наш безопасный объект хранения
+      // Мы сохраняем только узлы и трубы
+      partialize: (state) => ({ nodes: state.nodes, pipes: state.pipes }),
     }
-
-    const newPipe = {
-      id: crypto.randomUUID(),
-      type: 'pipe',
-      ...pipeData, // { startNodeId, endNodeId, vertices }
-      length: calculatePolylineLength(pipeData.vertices),
-      diameter: 100, // Default values
-      material: 'steel',
-    };
-    set((state) => ({ pipes: [...state.pipes, newPipe] }));
-    // Сразу выбираем новую трубу для редактирования свойств
-    set({ selectedObject: { type: 'pipe', id: newPipe.id } });
-  },
-
-  setNodes: (nodes) => set({ nodes, selectedObject: null }),
-  setPipes: (pipes) => set({ pipes }),
-
-  setSelectedObject: (object) => set({ selectedObject: object }),
-
-  updateNode: (nodeId, updatedProperties) => {
-    set((state) => ({
-      nodes: state.nodes.map(node => 
-        node.id === nodeId ? { ...node, ...updatedProperties } : node
-      ),
-    }));
-  },
-
-  updatePipe: (pipeId, updatedProperties) => {
-    set((state) => ({
-      pipes: state.pipes.map(pipe => 
-        pipe.id === pipeId ? { ...pipe, ...updatedProperties } : pipe
-      ),
-    }));
-  },
-
-  deleteObject: ({ type, id }) => {
-    set({ selectedObject: null });
-    if (type === 'node') {
-      set(state => ({
-        nodes: state.nodes.filter(node => node.id !== id),
-        pipes: state.pipes.filter(pipe => pipe.startNodeId !== id && pipe.endNodeId !== id)
-      }));
-    } else if (type === 'pipe') {
-      set(state => ({
-        pipes: state.pipes.filter(pipe => pipe.id !== id)
-      }));
-    }
-  },
-}));
+  )
+);
 
 export default useStore;

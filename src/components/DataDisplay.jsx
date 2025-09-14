@@ -1,4 +1,3 @@
-import React from 'react';
 import useStore from '../useStore';
 
 const DataDisplay = () => {
@@ -7,19 +6,19 @@ const DataDisplay = () => {
 
   return (
     <div className="data-display">
-      <h4>Объекты на карте</h4>
-      <h5>Точки (Nodes)</h5>
-      <ul>
-        {nodes.map(node => (
-          <li key={node.id}>ID: {node.id.substring(0, 8)}...</li>
-        ))}
-      </ul>
-      <h5>Трубы (Pipes)</h5>
-      <ul>
-        {pipes.map(pipe => (
-          <li key={pipe.id}>ID: {pipe.id.substring(0, 8)}...</li>
-        ))}
-      </ul>
+      <h4>Данные схемы</h4>
+      <div>
+        <h5>Узлы ({nodes.length})</h5>
+        {/* <ul>
+          {nodes.map(node => <li key={node.id}>{node.id}</li>)}
+        </ul> */}
+      </div>
+      <div>
+        <h5>Трубы ({pipes.length})</h5>
+        {/* <ul>
+          {pipes.map(pipe => <li key={pipe.id}>{pipe.id}</li>)}
+        </ul> */}
+      </div>
     </div>
   );
 };

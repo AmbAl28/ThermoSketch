@@ -1,89 +1,97 @@
-import React, { useState, useEffect } from 'react';
 import useStore from '../useStore';
 
 const PropertiesPanel = () => {
-  const selectedObject = useStore((state) => state.selectedObject);
-  const { nodes, pipes, updateNode, updatePipe, setSelectedObject, deleteObject } = useStore();
+  const { selectedObject, setSelectedObject, updateNode, updatePipe, deleteObject, nodes } = useStore();
 
-  const [formData, setFormData] = useState({});
+  if (!selectedObject) {
+    return (
+      <div className="properties-panel">
+        <h4>Свойства объекта</h4>
+        <p>Объект не выбран. Кликните на узел или трубу на карте, чтобы просмотреть и отредактировать их свойства.</p>
+      </div>
+    );
+  }
 
-  const object = selectedObject 
-    ? (selectedObject.type === 'node' 
-        ? nodes.find(n => n.id === selectedObject.id) 
-        : pipes.find(p => p.id === selectedObject.id))
-    : null;
+  const isNode = selectedObject.type === 'node';
+  const data = isNode 
+    ? useStore.getState().nodes.find(n => n.id === selectedObject.id)
+    : useStore.getState().pipes.find(p => p.id === selectedObject.id);
 
-  useEffect(() => {
-    if (object) {
-      setFormData(object);
-    } else {
-      setFormData({});
-    }
-  }, [object]);
+  if (!data) {
+    return (
+        <div className="properties-panel">
+          <h4>Ошибка</h4>
+          <p>Не удалось найти данные для выбранного объекта. Возможно, он был удален.</p>
+        </div>
+      );
+  }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    const newFormData = { ...formData, [name]: value };
-    setFormData(newFormData);
+  const handleClose = () => setSelectedObject(null);
 
-    if (selectedObject.type === 'node') {
-      updateNode(selectedObject.id, { [name]: value });
-    }
-    if (selectedObject.type === 'pipe') {
-      updatePipe(selectedObject.id, { [name]: value });
+  const handleDelete = () => {
+    if (window.confirm(`Вы уверены, что хотите удалить этот ${isNode ? 'узел' : 'участок'}? Это действие нельзя отменить.`)) {
+      deleteObject(selectedObject);
     }
   };
 
-  const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete this ${selectedObject.type}?`)) {
-      deleteObject(selectedObject);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    const updatedValue = name === 'elevation' || name === 'diameter' || name === 'length' ? parseFloat(value) : value;
+    
+    if (isNode) {
+      updateNode(selectedObject.id, { [name]: updatedValue });
+    } else {
+      updatePipe(selectedObject.id, { [name]: updatedValue });
     }
-  }
+  };
 
-  if (!object) {
-    return null;
-  }
+  const renderNodeForm = () => (
+    <>
+      <label htmlFor="name">Наименование</label>
+      <input type="text" id="name" name="name" value={data.name || ''} onChange={handleChange} placeholder="Введите наименование" />
+
+      <label htmlFor="nodeType">Тип узла</label>
+      <select id="nodeType" name="nodeType" value={data.nodeType || 'consumer'} onChange={handleChange}>
+        <option value="consumer">Потребитель</option>
+        <option value="source">Источник</option>
+        <option value="chamber">Камера</option>
+      </select>
+
+      <label htmlFor="elevation">Отметка высоты, м</label>
+      <input type="number" id="elevation" name="elevation" value={data.elevation || 0} onChange={handleChange} step="0.1" />
+      
+      {/* TODO: Add specific fields for consumer and source types */}
+    </>
+  );
+
+  const renderPipeForm = () => (
+    <>
+        <label htmlFor="length">Длина, м</label>
+        <input type="number" id="length" name="length" value={data.length || 0} onChange={handleChange} readOnly />
+
+        <label htmlFor="diameter">Диаметр, мм</label>
+        <input type="number" id="diameter" name="diameter" value={data.diameter || 100} onChange={handleChange} />
+
+        <label htmlFor="material">Материал</label>
+        <select id="material" name="material" value={data.material || 'steel'} onChange={handleChange}>
+            <option value="steel">Сталь</option>
+            <option value="ppu">ППУ</option>
+            <option value="pe">ПЭ</option>
+        </select>
+    </>
+  );
 
   return (
     <div className="properties-panel">
-      <h4>Properties</h4>
-      <p>ID: {object.id.substring(0, 8)}...</p>
-      <form onSubmit={(e) => e.preventDefault()}>
-        {selectedObject.type === 'node' && (
-          <>
-            <label>Name</label>
-            <input type="text" name="name" value={formData.name || ''} onChange={handleChange} />
-            <label>Type</label>
-            <select name="nodeType" value={formData.nodeType || 'consumer'} onChange={handleChange}>
-              <option value="consumer">Consumer</option>
-              <option value="source">Source</option>
-              <option value="chamber">Chamber</option>
-            </select>
-            <label>Elevation</label>
-            <input type="number" name="elevation" value={formData.elevation || 0} onChange={handleChange} />
-          </>
-        )}
-
-        {selectedObject.type === 'pipe' && (
-          <>
-            <label>Start Node ID</label>
-            <input type="text" value={object.startNodeId.substring(0, 8) + '...'} readOnly />
-            <label>End Node ID</label>
-            <input type="text" value={object.endNodeId.substring(0, 8) + '...'} readOnly />
-            <label>Length (m)</label>
-            <input type="number" name="length" value={formData.length || 0} onChange={handleChange} />
-            <label>Diameter (mm)</label>
-            <input type="number" name="diameter" value={formData.diameter || 0} onChange={handleChange} />
-            <label>Material</label>
-            <select name="material" value={formData.material || 'steel'} onChange={handleChange}>
-              <option value="steel">Steel</option>
-              <option value="ppu">PPU</option>
-              <option value="pe">PE</option>
-            </select>
-          </>
-        )}
-        <button type="button" className="close-btn" onClick={() => setSelectedObject(null)}>Close</button>
-        <button type="button" className="delete-btn" onClick={handleDelete}>Delete</button>
+      <h4>{isNode ? 'Редактирование узла' : 'Редактирование трубы'}</h4>
+      <p>ID: {data.id}</p>
+      <form>
+        {isNode ? renderNodeForm() : renderPipeForm()}
+        
+        <div className="form-buttons">
+            <button type="button" className="close-btn" onClick={handleClose}>Закрыть</button>
+            <button type="button" className="delete-btn" onClick={handleDelete}>Удалить</button>
+        </div>
       </form>
     </div>
   );

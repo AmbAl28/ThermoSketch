@@ -1,13 +1,23 @@
 import { useState } from 'react';
 import './App.css';
+import useStore from './useStore'; // Импортируем useStore
 import Map from './components/Map';
 import DataDisplay from './components/DataDisplay';
 import PropertiesPanel from './components/PropertiesPanel';
 import ExportButton from './components/ExportButton';
-import ImportButton from './components/ImportButton'; // Импорт
+import ImportButton from './components/ImportButton';
 
 function App() {
   const [drawingMode, setDrawingMode] = useState('none');
+  const clearProject = useStore((state) => state.clearProject); // Получаем экшен из хранилища
+
+  const handleClearProject = () => {
+    if (window.confirm('Вы уверены, что хотите полностью очистить проект? Все данные будут удалены.')) {
+      clearProject();
+      // Сообщение пользователю
+      alert('Проект был успешно очищен.');
+    }
+  };
 
   return (
     <div className="App">
@@ -18,7 +28,7 @@ function App() {
             onClick={() => setDrawingMode('point')}
             className={drawingMode === 'point' ? 'active' : ''}
           >
-            Добавить точку
+            Добавить узел
           </button>
           <button 
             onClick={() => setDrawingMode('pipe')}
@@ -34,8 +44,14 @@ function App() {
           </button>
         </div>
         <div className="import-export-controls">
-          <ImportButton /> {/* Добавляем кнопку импорта */}
-          <ExportButton /> {/* Оборачиваем кнопки в контейнер */}
+          <ImportButton />
+          <ExportButton />
+        </div>
+        {/* Новая кнопка для очистки */}
+        <div className="project-controls">
+            <button className="clear-btn" onClick={handleClearProject}>
+                Очистить проект
+            </button>
         </div>
         <PropertiesPanel />
         <DataDisplay />

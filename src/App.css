@@ -69,6 +69,28 @@
   background-color: #218838;
 }
 
+/* --- Project Controls Container --- */
+.project-controls {
+    margin-bottom: 20px;
+}
+
+.clear-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    color: white;
+    background-color: #dc3545; /* Красный цвет */
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.clear-btn:hover {
+    background-color: #c82333;
+}
+
 
 /* --- Properties Panel Styles --- */
 .properties-panel {
