@@ -5,6 +5,7 @@ import Map from './components/Map';
 import DataDisplay from './components/DataDisplay';
 import PropertiesPanel from './components/PropertiesPanel';
 import ExportButton from './components/ExportButton';
+import ExcelExportButton from './components/ExcelExportButton';
 import ImportButton from './components/ImportButton';
 
 function App() {
@@ -46,6 +47,7 @@ function App() {
         <div className="import-export-controls">
           <ImportButton />
           <ExportButton />
+          <ExcelExportButton />
         </div>
         {/* Новая кнопка для очистки */}
         <div className="project-controls">
