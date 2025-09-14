@@ -41,7 +41,18 @@ const useStore = create(
       setNodes: (nodes) => set({ nodes }),
       setPipes: (pipes) => set({ pipes }),
 
-      addNode: (node) => set((state) => ({ nodes: [...state.nodes, { ...node, name: `Узел ${state.nodes.length + 1}`, type: 'node' }] })),
+      addNode: (node) => set((state) => ({ 
+        nodes: [
+          ...state.nodes, 
+          { 
+            ...node, 
+            name: `Узел ${state.nodes.length + 1}`, 
+            type: 'node', 
+            nodeType: 'chamber', // Тип узла по умолчанию
+            elevation: 0, // Высота по умолчанию
+          }
+        ]
+      })),
       addPipe: (pipe) => set((state) => {
         const startNode = state.nodes.find(n => n.id === pipe.startNodeId);
         const endNode = state.nodes.find(n => n.id === pipe.endNodeId);

@@ -6,6 +6,7 @@ import DataDisplay from './components/DataDisplay';
 import PropertiesPanel from './components/PropertiesPanel';
 import ExportButton from './components/ExportButton';
 import ExcelExportButton from './components/ExcelExportButton';
+import DxfExportButton from './components/DxfExportButton';
 import ImportButton from './components/ImportButton';
 
 function App() {
@@ -48,6 +49,7 @@ function App() {
           <ImportButton />
           <ExportButton />
           <ExcelExportButton />
+          <DxfExportButton />
         </div>
         {/* Новая кнопка для очистки */}
         <div className="project-controls">
