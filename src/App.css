@@ -160,3 +160,11 @@
 .highlighted-marker {
   filter: hue-rotate(120deg) brightness(1.5);
 }
+
+/* --- Drawing Handler Styles --- */
+.snapped-node-icon {
+  background: rgba(0, 255, 0, 0.3);
+  border: 2px solid #00ff00;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #00ff00;
+}

@@ -1,11 +1,16 @@
 import { create } from 'zustand';
 import L from 'leaflet';
 
-const calculateLength = (node1, node2) => {
-  if (!node1 || !node2) return 0;
-  const point1 = L.latLng(node1.lat, node1.lng);
-  const point2 = L.latLng(node2.lat, node2.lng);
-  return Math.round(point1.distanceTo(point2));
+// Helper to calculate length of a polyline
+const calculatePolylineLength = (vertices) => {
+  if (!vertices || vertices.length < 2) return 0;
+  let totalLength = 0;
+  for (let i = 0; i < vertices.length - 1; i++) {
+    const point1 = L.latLng(vertices[i]);
+    const point2 = L.latLng(vertices[i + 1]);
+    totalLength += point1.distanceTo(point2);
+  }
+  return Math.round(totalLength); // distance in meters
 };
 
 const useStore = create((set, get) => ({
@@ -13,35 +18,38 @@ const useStore = create((set, get) => ({
   pipes: [],
   selectedObject: null,
 
-  // Actions to add single items
   addNode: (nodeData) => {
     const newNode = { ...nodeData, name: 'New Node', nodeType: 'consumer', elevation: 0 };
     set((state) => ({ nodes: [...state.nodes, newNode] }));
   },
   
-  addPipe: ({ startNodeId, endNodeId }) => {
+  // addPipe теперь принимает полный объект трубы, включая вершины
+  addPipe: (pipeData) => {
     const { nodes } = get();
-    const startNode = nodes.find(n => n.id === startNodeId);
-    const endNode = nodes.find(n => n.id === endNodeId);
-    if (!startNode || !endNode) return;
+    const startNode = nodes.find(n => n.id === pipeData.startNodeId);
+    const endNode = nodes.find(n => n.id === pipeData.endNodeId);
+
+    if (!startNode || !endNode) {
+      console.error("Pipe creation failed: Start or end node not found.");
+      return;
+    }
 
     const newPipe = {
       id: crypto.randomUUID(),
       type: 'pipe',
-      startNodeId,
-      endNodeId,
-      length: calculateLength(startNode, endNode),
-      diameter: 100,
+      ...pipeData, // { startNodeId, endNodeId, vertices }
+      length: calculatePolylineLength(pipeData.vertices),
+      diameter: 100, // Default values
       material: 'steel',
     };
     set((state) => ({ pipes: [...state.pipes, newPipe] }));
+    // Сразу выбираем новую трубу для редактирования свойств
+    set({ selectedObject: { type: 'pipe', id: newPipe.id } });
   },
 
-  // Actions to replace the entire dataset
-  setNodes: (nodes) => set({ nodes, selectedObject: null }), // Сбрасываем выбор при импорте
+  setNodes: (nodes) => set({ nodes, selectedObject: null }),
   setPipes: (pipes) => set({ pipes }),
 
-  // Actions to manage selection and updates
   setSelectedObject: (object) => set({ selectedObject: object }),
 
   updateNode: (nodeId, updatedProperties) => {
