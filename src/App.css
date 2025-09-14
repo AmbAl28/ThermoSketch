@@ -1,42 +1,162 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+.App {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 25%; 
+  min-width: 300px;
+  padding: 20px;
+  background-color: #f0f0f0;
+  box-sizing: border-box;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-container {
+  width: 75%;
+}
+
+.controls button {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.controls button.active {
+  background-color: #e0e0e0;
+  font-weight: bold;
+  border-color: #999;
+}
+
+/* --- Import/Export Buttons Container --- */
+.import-export-controls {
+  display: flex;
+  gap: 10px; /* Расстояние между кнопками */
+  margin: 10px 0;
+}
+
+.import-btn, .export-btn {
+  flex-grow: 1; /* Растягиваем кнопки на всю ширину */
+  padding: 12px;
+  border: none;
+  color: white;
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  border-radius: 5px;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+.import-btn {
+  background-color: #007bff; /* Синий цвет для импорта */
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.import-btn:hover {
+  background-color: #0069d9;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.export-btn {
+  background-color: #28a745; /* Зеленый цвет */
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.export-btn:hover {
+  background-color: #218838;
 }
 
-.card {
-  padding: 2em;
+
+/* --- Properties Panel Styles --- */
+.properties-panel {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  padding: 15px;
+  margin-top: 20px;
+  border-radius: 5px;
 }
 
-.read-the-docs {
-  color: #888;
+.properties-panel h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.properties-panel p {
+  font-size: 0.8em;
+  color: #666;
+  word-wrap: break-word;
+}
+
+.properties-panel form label {
+  display: block;
+  font-size: 0.9em;
+  margin-top: 10px;
+  margin-bottom: 3px;
+}
+
+.properties-panel form input,
+.properties-panel form select {
+  width: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.properties-panel form button {
+  width: calc(50% - 5px);
+  padding: 10px;
+  margin-top: 20px;
+  border: none;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.properties-panel form .close-btn {
+  background-color: #6c757d;
+  color: white;
+  margin-right: 10px;
+}
+
+.properties-panel form .delete-btn {
+  background-color: #dc3545;
+  color: white;
+}
+
+
+/* --- Data Display Styles --- */
+.data-display {
+  margin-top: auto; 
+  padding-top: 20px;
+  border-top: 1px solid #ddd;
+}
+
+.data-display h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.data-display h5 {
+  margin-top: 15px;
+  margin-bottom: 5px;
+}
+
+.data-display ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 0;
+  font-size: 0.9em;
+  color: #333;
+}
+
+.data-display li {
+  padding: 2px 0;
+}
+
+/* Highlight for the first node selected for a pipe */
+.highlighted-marker {
+  filter: hue-rotate(120deg) brightness(1.5);
 }

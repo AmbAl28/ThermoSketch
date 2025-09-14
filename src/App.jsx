@@ -1,35 +1,50 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from 'react';
+import './App.css';
+import Map from './components/Map';
+import DataDisplay from './components/DataDisplay';
+import PropertiesPanel from './components/PropertiesPanel';
+import ExportButton from './components/ExportButton';
+import ImportButton from './components/ImportButton'; // Импорт
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [drawingMode, setDrawingMode] = useState('none');
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="App">
+      <div className="sidebar">
+        <h2>Панель управления</h2>
+        <div className="controls">
+          <button 
+            onClick={() => setDrawingMode('point')}
+            className={drawingMode === 'point' ? 'active' : ''}
+          >
+            Добавить точку
+          </button>
+          <button 
+            onClick={() => setDrawingMode('pipe')}
+            className={drawingMode === 'pipe' ? 'active' : ''}
+          >
+            Нарисовать трубу
+          </button>
+          <button 
+            onClick={() => setDrawingMode('none')}
+            className={drawingMode === 'none' ? 'active' : ''}
+          >
+            Выбрать
+          </button>
+        </div>
+        <div className="import-export-controls">
+          <ImportButton /> {/* Добавляем кнопку импорта */}
+          <ExportButton /> {/* Оборачиваем кнопки в контейнер */}
+        </div>
+        <PropertiesPanel />
+        <DataDisplay />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
+      <div className="map-container">
+        <Map drawingMode={drawingMode} setDrawingMode={setDrawingMode} />
       </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
