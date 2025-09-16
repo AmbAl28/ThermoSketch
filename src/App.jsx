@@ -10,6 +10,7 @@ import OperationsMenu from './components/OperationsMenu';
 function App() {
   const [drawingMode, setDrawingMode] = useState('none');
   const clearProject = useStore((state) => state.clearProject);
+  const { isPanelCollapsed, togglePanel } = useStore();
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -50,38 +51,47 @@ function App() {
 
   return (
     <div className="App">
-      <div className="sidebar">
-        <h2>Леноблтеплоснаб</h2>
+      <div className={`sidebar ${isPanelCollapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-header">
+          {!isPanelCollapsed && <h2>Леноблтеплоснаб</h2>}
+          <button onClick={togglePanel} className="toggle-panel-btn">
+            {isPanelCollapsed ? '\u00BB' : '\u00AB'} {/* >> / << */}
+          </button>
+        </div>
+
         <div className="controls">
           <button 
             onClick={() => setDrawingMode('point')}
             className={drawingMode === 'point' ? 'active' : ''}
             title="Добавить узел (Alt+1)"
           >
-            📍 Добавить узел
+            📍{!isPanelCollapsed && ' Добавить узел'}
           </button>
           <button 
             onClick={() => setDrawingMode('pipe')}
             className={drawingMode === 'pipe' ? 'active' : ''}
             title="Добавить трубу (Alt+2)"
           >
-            〰️ Добавить трубу
+            〰️{!isPanelCollapsed && ' Добавить трубу'}
           </button>
           <button 
             onClick={() => setDrawingMode('none')}
             className={drawingMode === 'none' ? 'active' : ''}
             title="Выбрать объект (Alt+3)"
           >
-            🖱️ Выбрать
+            🖱️{!isPanelCollapsed && ' Выбрать'}
           </button>
         </div>
+        
+        {!isPanelCollapsed && (
+          <>
+            <hr className="sidebar-divider" />
+            <OperationsMenu onClearProject={handleClearProject} />
+            <PropertiesPanel />
+            <DataDisplay />
+          </>
+        )}
 
-        <hr className="sidebar-divider" />
-
-        <OperationsMenu onClearProject={handleClearProject} />
-
-        <PropertiesPanel />
-        <DataDisplay />
       </div>
       <div className="map-container">
         <Map drawingMode={drawingMode} setDrawingMode={setDrawingMode} />

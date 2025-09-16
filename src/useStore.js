@@ -37,6 +37,7 @@ const useStore = create(
       nodes: [],
       pipes: [],
       selectedObject: null,
+      isPanelCollapsed: false, // новое состояние
 
       setNodes: (nodes) => set({ nodes }),
       setPipes: (pipes) => set({ pipes }),
@@ -104,12 +105,14 @@ const useStore = create(
         // Просто сбрасываем состояние. Middleware `persist` автоматически очистит localStorage.
         set({ nodes: [], pipes: [], selectedObject: null });
       },
+        
+      togglePanel: () => set(state => ({ isPanelCollapsed: !state.isPanelCollapsed })), // новый экшен
     }),
     {
       name: 'thermal-network-storage', // Имя ключа в localStorage
       storage: createJSONStorage(() => safeJsonStorage), // Используем наш безопасный объект хранения
       // Мы сохраняем только узлы и трубы
-      partialize: (state) => ({ nodes: state.nodes, pipes: state.pipes }),
+      partialize: (state) => ({ nodes: state.nodes, pipes: state.pipes, isPanelCollapsed: state.isPanelCollapsed }),
     }
   )
 );
