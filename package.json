@@ -3,7 +3,6 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://AmbAl28.github.io/ThermoSketch",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
