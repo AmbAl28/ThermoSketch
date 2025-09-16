@@ -5,8 +5,6 @@ import useStore from '../useStore';
 import DrawingHandler from './DrawingHandler';
 
 // --- Исправление для иконок маркеров ---
-// Webpack может некорректно обрабатывать пути к изображениям Leaflet.
-// Этот код вручную устанавливает пути к иконкам маркеров.
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -14,46 +12,63 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
+// --- ОБНОВЛЕННАЯ Конфигурация иконок для разных типов узлов ---
+const nodeIconConfig = {
+  source: { emoji: '🏭', color: '#4CAF50' },       // Источник (зеленый)
+  consumer: { emoji: '🏠', color: '#F44336' },   // Потребитель (красный)
+  chamber: { emoji: '⊡', color: '#607D8B' },    // Камера (серый)
+  diameter_change: { emoji: '↕️', color: '#FFC107' }, // Смена диаметра (желтый)
+  valve: { emoji: '🚰', color: '#03A9F4' },      // Арматура (голубой)
+  default: { emoji: '❓', color: '#9E9E9E' }       // По умолчанию (темно-серый)
+};
+
+// --- ОБНОВЛЕННАЯ Функция генерации иконок ---
 const getMarkerIcon = (nodeType) => {
-    // Базовый цвет
-    let color = '#4a89f3'; // Синий по умолчанию (для камер)
+  const config = nodeIconConfig[nodeType] || nodeIconConfig.default;
 
-    if (nodeType === 'consumer') {
-        color = '#f44336'; // Красный для потребителей
-    } else if (nodeType === 'source') {
-        color = '#4caf50'; // Зеленый для источников
-    }
+  // Размеры иконок были уменьшены
+  const iconSize = 20; // Вместо 32
+  const fontSize = 12; // Вместо 20
 
-    const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
-        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" fill="${color}"/>
-        <circle cx="12" cy="9.5" r="2.5" fill="white"/>
-    </svg>`;
+  const html = `
+    <div style="
+      background-color: ${config.color};
+      width: ${iconSize}px;
+      height: ${iconSize}px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: ${fontSize}px;
+      border: 1.5px solid #fff;
+      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    ">
+      ${config.emoji}
+    </div>
+  `;
 
-    return L.divIcon({
-        html: svg,
-        className: 'custom-leaflet-icon',
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32]
-    });
-}
-
+  return L.divIcon({
+    html: html,
+    className: 'custom-emoji-icon',
+    iconSize: [iconSize, iconSize],
+    iconAnchor: [iconSize / 2, iconSize / 2], // Динамический расчет центра
+    popupAnchor: [0, -iconSize / 2] // Динамический расчет
+  });
+};
 
 const Map = ({ drawingMode, setDrawingMode }) => {
   const nodes = useStore((state) => state.nodes);
   const pipes = useStore((state) => state.pipes);
   const setSelectedObject = useStore((state) => state.setSelectedObject);
 
-  // Задаем границы для отображения
   const bounds = [
-    [59.77001946144852, 32.040546654692974], // Юго-западный угол
-    [60.46696006998797, 33.09151159242312]  // Северо-восточный угол
+    [59.77001946144852, 32.040546654692974],
+    [60.46696006998797, 33.09151159242312]
   ];
 
   return (
     <MapContainer 
-        bounds={bounds} // <-- Устанавливаем границы
+        bounds={bounds}
         style={{ height: '100%', width: '100%' }} 
     >
       <TileLayer
@@ -63,12 +78,11 @@ const Map = ({ drawingMode, setDrawingMode }) => {
 
       <DrawingHandler drawingMode={drawingMode} setDrawingMode={setDrawingMode} />
       
-      {/* Рендеринг труб */}
       {pipes.map(pipe => (
           <Polyline 
               key={pipe.id}
               positions={pipe.vertices}
-              color="#0000ff" // Синий цвет для труб
+              color="#0000ff"
               weight={4}
               eventHandlers={{
                   click: () => setSelectedObject({ id: pipe.id, type: 'pipe' })
@@ -76,7 +90,6 @@ const Map = ({ drawingMode, setDrawingMode }) => {
           />
       ))}
 
-      {/* Рендеринг узлов */}
       {nodes.map(node => (
         <Marker 
           key={node.id} 

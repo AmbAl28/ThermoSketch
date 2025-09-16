@@ -2,6 +2,7 @@
 .App {
   display: flex;
   height: 100vh;
+  overflow: hidden; /* Предотвращаем прокрутку всего приложения */
 }
 
 .sidebar {
@@ -9,12 +10,15 @@
   min-width: 320px;
   max-width: 400px;
   padding: 20px;
-  background-color: #f0f0f0;
+  background-color: #f7f7f7; /* Светлый фон */
+  color: #333; /* Темный текст */
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
-  position: relative; /* Для позиционирования кнопки */
+  position: relative; 
+  z-index: 1000; 
+  overflow-y: auto; 
 }
 
 .sidebar.collapsed {
@@ -29,7 +33,21 @@
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+}
+
+.logo-title {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 1.8em;
+  font-weight: 300;
+  margin: 0;
+  color: #2c3e50;
+  white-space: nowrap;
+}
+
+.logo-sketch {
+  font-weight: 700;
+  color: #007bff; /* Синий акцент */
 }
 
 .sidebar.collapsed .sidebar-header {
@@ -40,10 +58,12 @@
 .toggle-panel-btn {
   background: none;
   border: 1px solid #ccc;
+  color: #333;
   border-radius: 5px;
   padding: 5px 10px;
   cursor: pointer;
   font-size: 1.2em;
+  transition: background-color 0.2s;
 }
 
 .toggle-panel-btn:hover {
@@ -62,18 +82,19 @@
 }
 
 .controls button {
-  padding: 10px 12px;
+  padding: 12px;
   border: 1px solid #ccc;
   border-radius: 8px;
   background-color: #fff;
+  color: #333;
   cursor: pointer;
   text-align: center;
-  font-size: 0.9em;
+  font-size: 1em;
   font-weight: 500;
-  transition: background-color 0.2s, color 0.2s;
-  white-space: nowrap; /* Предотвращаем перенос текста */
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis; /* Добавляем многоточие, если текст не помещается */
+  text-overflow: ellipsis;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -81,11 +102,21 @@
 
 .sidebar.collapsed .controls button {
   justify-content: center;
+  padding: 12px 0;
 }
 
+.control-text {
+  transition: opacity 0.3s ease;
+}
+
+.sidebar.collapsed .control-text {
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+}
 
 .controls button:hover {
-  background-color: #e9e9e9;
+  background-color: #f0f0f0;
   border-color: #bbb;
 }
 
@@ -96,19 +127,16 @@
   font-weight: bold;
 }
 
-/* Divider */
 .sidebar-divider {
   border: none;
-  border-top: 1px solid #ccc;
+  border-top: 1px solid #ddd;
   margin: 20px 0;
   width: 100%;
 }
 
-
-/* --- Properties Panel Styles --- */
 .properties-panel {
   background-color: #fff;
-  border: 1px solid #ccc;
+  border: 1px solid #ddd;
   padding: 15px;
   margin-top: 20px;
   border-radius: 5px;
@@ -117,6 +145,7 @@
 .properties-panel h4 {
   margin-top: 0;
   margin-bottom: 15px;
+  color: #333;
 }
 
 .properties-panel p {
@@ -130,6 +159,7 @@
   font-size: 0.9em;
   margin-top: 10px;
   margin-bottom: 3px;
+  color: #555;
 }
 
 .properties-panel form input,
@@ -138,6 +168,8 @@
   padding: 8px;
   box-sizing: border-box;
   border: 1px solid #ccc;
+  background-color: #fff;
+  color: #333;
   border-radius: 3px;
 }
 
@@ -154,34 +186,61 @@
   border: none;
   cursor: pointer;
   border-radius: 3px;
+  transition: background-color 0.2s;
+}
+
+.properties-panel form .save-btn {
+  background-color: #28a745;
+  color: white;
+}
+.properties-panel form .save-btn:hover {
+  background-color: #218838;
 }
 
 .properties-panel form .close-btn {
   background-color: #6c757d;
   color: white;
 }
+.properties-panel form .close-btn:hover {
+  background-color: #5a6268;
+}
 
 .properties-panel form .delete-btn {
   background-color: #dc3545;
   color: white;
 }
+.properties-panel form .delete-btn:hover {
+  background-color: #c82333;
+}
 
-
-/* --- Data Display Styles --- */
 .data-display {
   margin-top: auto; 
-  padding-top: 20px;
-  border-top: 1px solid #ddd;
+  padding-top: 10px;
 }
 
-.data-display h4 {
+.data-summary-header {
+  background-color: #e9ecef;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.data-summary-content {
+  padding: 15px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 5px 5px;
+}
+
+.data-display h4, .data-display h5 {
+  color: #333;
   margin-top: 0;
   margin-bottom: 10px;
-}
-
-.data-display h5 {
-  margin-top: 15px;
-  margin-bottom: 5px;
 }
 
 .data-display ul {
@@ -189,19 +248,24 @@
   padding-left: 0;
   margin: 0;
   font-size: 0.9em;
-  color: #333;
+  color: #555;
 }
 
 .data-display li {
-  padding: 2px 0;
+  padding: 4px 0;
+  font-size: 0.85em;
 }
 
-/* Highlight for the first node selected for a pipe */
+.summary-divider {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 15px 0;
+}
+
 .highlighted-marker {
   filter: hue-rotate(120deg) brightness(1.5);
 }
 
-/* --- Drawing Handler Styles --- */
 .snapped-node-icon {
   background: rgba(0, 255, 0, 0.3);
   border: 2px solid #00ff00;
