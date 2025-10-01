@@ -12,27 +12,22 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// --- ОБНОВЛЕННАЯ Конфигурация иконок для разных типов узлов ---
 const nodeIconConfig = {
-  source: { emoji: '🏭', color: '#4CAF50' },       // Источник (зеленый)
-  consumer: { emoji: '🏠', color: '#F44336' },   // Потребитель (красный)
-  chamber: { emoji: '⊡', color: '#607D8B' },    // Камера (серый)
-  diameter_change: { emoji: '↕️', color: '#FFC107' }, // Смена диаметра (желтый)
-  valve: { emoji: '🚰', color: '#03A9F4' },      // Арматура (голубой)
-  default: { emoji: '❓', color: '#9E9E9E' }       // По умолчанию (темно-серый)
+  source: { emoji: '🏭', color: '#4CAF50' },
+  consumer: { emoji: '🏠', color: '#F44336' },
+  chamber: { emoji: '⊡', color: '#607D8B' },
+  diameter_change: { emoji: '↕️', color: '#FFC107' },
+  valve: { emoji: '🚰', color: '#03A9F4' },
+  default: { emoji: '❓', color: '#9E9E9E' }
 };
 
-// --- ОБНОВЛЕННАЯ Функция генерации иконок ---
-const getMarkerIcon = (nodeType) => {
+const getMarkerIcon = (nodeType, isMoving) => {
   const config = nodeIconConfig[nodeType] || nodeIconConfig.default;
-
-  // Размеры иконок были уменьшены
-  const iconSize = 20; // Вместо 32
-  const fontSize = 12; // Вместо 20
-
+  const iconSize = 20;
+  const fontSize = 12;
   const html = `
     <div style="
-      background-color: ${config.color};
+      background-color: ${isMoving ? '#FFC107' : config.color};
       width: ${iconSize}px;
       height: ${iconSize}px;
       border-radius: 50%;
@@ -46,20 +41,22 @@ const getMarkerIcon = (nodeType) => {
       ${config.emoji}
     </div>
   `;
-
   return L.divIcon({
     html: html,
     className: 'custom-emoji-icon',
     iconSize: [iconSize, iconSize],
-    iconAnchor: [iconSize / 2, iconSize / 2], // Динамический расчет центра
-    popupAnchor: [0, -iconSize / 2] // Динамический расчет
+    iconAnchor: [iconSize / 2, iconSize / 2],
+    popupAnchor: [0, -iconSize / 2]
   });
 };
 
 const Map = ({ drawingMode, setDrawingMode }) => {
-  const nodes = useStore((state) => state.nodes);
-  const pipes = useStore((state) => state.pipes);
-  const setSelectedObject = useStore((state) => state.setSelectedObject);
+  const { 
+    nodes, 
+    pipes, 
+    setSelectedObject, 
+    movingNodeId,
+  } = useStore(state => state);
 
   const bounds = [
     [59.77001946144852, 32.040546654692974],
@@ -78,25 +75,47 @@ const Map = ({ drawingMode, setDrawingMode }) => {
 
       <DrawingHandler drawingMode={drawingMode} setDrawingMode={setDrawingMode} />
       
-      {pipes.map(pipe => (
-          <Polyline 
-              key={pipe.id}
-              positions={pipe.vertices}
-              color="#0000ff"
-              weight={4}
-              eventHandlers={{
-                  click: () => setSelectedObject({ id: pipe.id, type: 'pipe' })
-              }}
-          />
-      ))}
+      {pipes.map(pipe => {
+          const isConnected = pipe.startNodeId === movingNodeId || pipe.endNodeId === movingNodeId;
+          return (
+            <Polyline 
+                key={pipe.id}
+                positions={pipe.vertices}
+                color={isConnected ? '#FFC107' : '#0000ff'}
+                weight={4}
+                eventHandlers={{
+                    click: (e) => {
+                        if (movingNodeId) {
+                            L.DomEvent.stopPropagation(e);
+                            return;
+                        }
+                        L.DomEvent.stopPropagation(e);
+                        setSelectedObject({ id: pipe.id, type: 'pipe' });
+                    }
+                }}
+            />
+          )
+      })}
 
       {nodes.map(node => (
         <Marker 
           key={node.id} 
           position={[node.lat, node.lng]} 
-          icon={getMarkerIcon(node.nodeType)}
+          icon={getMarkerIcon(node.nodeType, node.id === movingNodeId)}
           eventHandlers={{
-            click: () => setSelectedObject({ id: node.id, type: 'node' }),
+            click: (e) => {
+              if (movingNodeId) {
+                L.DomEvent.stopPropagation(e);
+                return;
+              }
+
+              if (drawingMode === 'pipe') {
+                return;
+              }
+
+              L.DomEvent.stopPropagation(e);
+              setSelectedObject({ id: node.id, type: 'node' });
+            },
           }}
         />
       ))}

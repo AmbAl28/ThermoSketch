@@ -36,9 +36,11 @@ const useStore = create(
       pipes: [],
       selectedObject: null,
       isPanelCollapsed: false,
+      movingNodeId: null, // Заменено draggedNodeId на movingNodeId
 
       setNodes: (nodes) => set({ nodes }),
       setPipes: (pipes) => set({ pipes }),
+      setMovingNodeId: (nodeId) => set({ movingNodeId: nodeId }), // Обновлено для перемещаемого узла
 
       addNode: (node) => set((state) => ({ 
         nodes: [
@@ -51,11 +53,10 @@ const useStore = create(
             elevation: 0,
             contractNumber: '',
             note: '',
-            // Новые параметры
-            heatLoad: '', // Тепловая нагрузка (Гкал/ч)
-            staticPressure: '', // Статический напор (м)
-            supplyTemperature: '', // Температура подачи (°C)
-            returnTemperature: '', // Температура обратки (°C)
+            heatLoad: '', 
+            staticPressure: '',
+            supplyTemperature: '',
+            returnTemperature: '',
           }
         ]
       })),
@@ -84,6 +85,32 @@ const useStore = create(
       updateNode: (id, data) => set((state) => ({ 
         nodes: state.nodes.map(node => node.id === id ? { ...node, ...data } : node)
       })),
+
+      updateNodePosition: (nodeId, newPosition) => set((state) => {
+        const newNodes = state.nodes.map(node => 
+          node.id === nodeId 
+            ? { ...node, lat: newPosition.lat, lng: newPosition.lng } 
+            : node
+        );
+
+        const newPipes = state.pipes.map(pipe => {
+          const newPipe = { ...pipe, vertices: [...pipe.vertices] };
+          let updated = false;
+
+          if (pipe.startNodeId === nodeId) {
+            newPipe.vertices[0] = [newPosition.lat, newPosition.lng];
+            updated = true;
+          }
+          if (pipe.endNodeId === nodeId) {
+            newPipe.vertices[newPipe.vertices.length - 1] = [newPosition.lat, newPosition.lng];
+            updated = true;
+          }
+
+          return updated ? newPipe : pipe;
+        });
+        
+        return { nodes: newNodes, pipes: newPipes };
+      }),
 
       updatePipe: (id, data) => set((state) => ({ 
         pipes: state.pipes.map(pipe => pipe.id === id ? { ...pipe, ...data } : pipe)

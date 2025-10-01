@@ -1,7 +1,13 @@
 import useStore from '../useStore';
 
 const PropertiesPanel = () => {
-  const { selectedObject, setSelectedObject, updateNode, updatePipe, deleteObject } = useStore();
+  const { selectedObject, setSelectedObject, updateNode, updatePipe, deleteObject, movingNodeId, setMovingNodeId } = useStore();
+
+  const handleMoveClick = () => {
+    if (selectedObject && selectedObject.type === 'node') {
+      setMovingNodeId(selectedObject.id);
+    }
+  };
 
   if (!selectedObject) {
     return (
@@ -36,7 +42,6 @@ const PropertiesPanel = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Расширяем список числовых полей
     const isNumericField = [
       'elevation', 'diameter', 'length', 'actualLength', 'insulationWear',
       'heatLoad', 'staticPressure', 'supplyTemperature', 'returnTemperature'
@@ -68,7 +73,6 @@ const PropertiesPanel = () => {
       <label htmlFor="elevation">Отметка высоты, м</label>
       <input type="number" id="elevation" name="elevation" value={data.elevation || 0} onChange={handleChange} step="0.1" />
 
-      {/* Новые поля для узлов */}
       <label htmlFor="heatLoad">Тепловая нагрузка, Гкал/ч</label>
       <input type="number" id="heatLoad" name="heatLoad" value={data.heatLoad || ''} onChange={handleChange} placeholder="Не задана" step="0.01"/>
 
@@ -130,10 +134,19 @@ const PropertiesPanel = () => {
       <p>ID: {data.id}</p>
       <form>
         {isNode ? renderNodeForm() : renderPipeForm()}
-        
+
+        {movingNodeId === data.id && 
+            <p className="move-tooltip">Нажмите Escape для отмены</p>
+        }
+
         <div className="form-buttons">
-          <button type="button" className="close-btn" onClick={handleClose}>Закрыть</button>
+          {isNode && (
+            <button type="button" className="move-btn" onClick={handleMoveClick} disabled={!!movingNodeId}>
+              {movingNodeId === data.id ? 'Выберите новое место' : 'Переместить'}
+            </button>
+          )}
           <button type="button" className="delete-btn" onClick={handleDelete}>Удалить</button>
+          <button type="button" className="close-btn" onClick={handleClose}>Закрыть</button>
         </div>
       </form>
     </div>
