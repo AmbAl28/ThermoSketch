@@ -1,33 +1,52 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-// Кастомный объект для хранения, который перехватывает ошибки парсинга JSON.
+// --- Вспомогательные функции ---
+
+// Функция для расчета расстояния по формуле гаверсинуса (в метрах)
+function haversineDistance(coords1, coords2) {
+  const toRad = (x) => (x * Math.PI) / 180;
+  const R = 6371e3; // Радиус Земли в метрах
+
+  const dLat = toRad(coords2[0] - coords1[0]);
+  const dLon = toRad(coords2[1] - coords1[1]);
+  const lat1 = toRad(coords1[0]);
+  const lat2 = toRad(coords2[0]);
+
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
+// ИСПРАВЛЕНИЕ: Функция для расчета полной длины трубы с округлением до целого
+function calculatePipeLength(vertices) {
+  let totalLength = 0;
+  for (let i = 0; i < vertices.length - 1; i++) {
+    totalLength += haversineDistance(vertices[i], vertices[i + 1]);
+  }
+  return Math.round(totalLength); // Округляем до ближайшего целого
+}
+
+// Кастомный объект для хранения
 const safeJsonStorage = {
   getItem: (name) => {
     const str = localStorage.getItem(name);
-    if (!str) {
-      return null; 
-    }
+    if (!str) return null;
     try {
         JSON.parse(str);
         return str;
     } catch (e) {
-        console.error("Обнаружены поврежденные данные в localStorage, они будут очищены:", e);
-        alert("Не удалось загрузить сохраненные данные. Они будут очищены.");
+        console.error("Обнаружены поврежденные данные, localStorage будет очищен:", e);
         localStorage.removeItem(name);
         return null;
     }
   },
-  setItem: (name, value) => {
-    try {
-      localStorage.setItem(name, value);
-    } catch (e) {
-      console.error("Ошибка записи в localStorage:", e);
-      alert("Не удалось сохранить состояние проекта. Возможно, хранилище переполнено.");
-    }
-  },
+  setItem: (name, value) => localStorage.setItem(name, value),
   removeItem: (name) => localStorage.removeItem(name),
 };
+
 
 const useStore = create(
   persist(
@@ -36,18 +55,18 @@ const useStore = create(
       pipes: [],
       selectedObject: null,
       isPanelCollapsed: false,
-      movingNodeId: null, // Заменено draggedNodeId на movingNodeId
+      movingNodeId: null,
 
       setNodes: (nodes) => set({ nodes }),
       setPipes: (pipes) => set({ pipes }),
-      setMovingNodeId: (nodeId) => set({ movingNodeId: nodeId }), // Обновлено для перемещаемого узла
+      setMovingNodeId: (nodeId) => set({ movingNodeId: nodeId }),
 
       addNode: (node) => set((state) => ({ 
         nodes: [
           ...state.nodes, 
           { 
             ...node, 
-            name: `Узел ${state.nodes.length + 1}`, 
+            name: `Узел ${state.nodes.length + 1}`,
             type: 'node', 
             nodeType: 'chamber',
             elevation: 0,
@@ -60,6 +79,7 @@ const useStore = create(
           }
         ]
       })),
+      
       addPipe: (pipe) => set((state) => {
         const startNode = state.nodes.find(n => n.id === pipe.startNodeId);
         const endNode = state.nodes.find(n => n.id === pipe.endNodeId);
@@ -72,6 +92,7 @@ const useStore = create(
                     ...pipe, 
                     id: crypto.randomUUID(), 
                     type: 'pipe', 
+                    length: calculatePipeLength(pipe.vertices), // Длина будет округлена
                     diameter: 100, 
                     material: 'Сталь',
                     actualLength: '', 
@@ -94,19 +115,27 @@ const useStore = create(
         );
 
         const newPipes = state.pipes.map(pipe => {
-          const newPipe = { ...pipe, vertices: [...pipe.vertices] };
           let updated = false;
+          const newVertices = [...pipe.vertices];
 
           if (pipe.startNodeId === nodeId) {
-            newPipe.vertices[0] = [newPosition.lat, newPosition.lng];
+            newVertices[0] = [newPosition.lat, newPosition.lng];
             updated = true;
           }
           if (pipe.endNodeId === nodeId) {
-            newPipe.vertices[newPipe.vertices.length - 1] = [newPosition.lat, newPosition.lng];
+            newVertices[newVertices.length - 1] = [newPosition.lat, newPosition.lng];
             updated = true;
           }
 
-          return updated ? newPipe : pipe;
+          if (updated) {
+            return {
+              ...pipe,
+              vertices: newVertices,
+              length: calculatePipeLength(newVertices), // Длина будет округлена
+            };
+          }
+
+          return pipe;
         });
         
         return { nodes: newNodes, pipes: newPipes };

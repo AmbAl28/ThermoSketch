@@ -16,7 +16,7 @@ const nodeIconConfig = {
   source: { emoji: '🏭', color: '#4CAF50' },
   consumer: { emoji: '🏠', color: '#F44336' },
   chamber: { emoji: '⊡', color: '#607D8B' },
-  diameter_change: { emoji: '↕️', color: '#FFC107' },
+  diameter_change: { emoji: '↕️', color: '#9C27B0' }, // Изменено на фиолетовый
   valve: { emoji: '🚰', color: '#03A9F4' },
   default: { emoji: '❓', color: '#9E9E9E' }
 };

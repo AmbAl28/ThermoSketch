@@ -1,69 +1,20 @@
-import React, { useRef } from 'react';
+import { useRef } from 'react';
 import useStore from '../useStore';
 
+// Функции гидратации остаются без изменений
+const hydrateNode = (node) => {
+  const defaultNode = { name: 'Узел', type: 'node', nodeType: 'chamber', elevation: 0, contractNumber: '', note: '', heatLoad: '', staticPressure: '', supplyTemperature: '', returnTemperature: '' };
+  return { ...defaultNode, ...node };
+};
+
+const hydratePipe = (pipe) => {
+  const defaultPipe = { type: 'pipe', diameter: 100, material: 'Сталь', actualLength: '', insulationMaterial: 'ППУ', insulationWear: 0 };
+  return { ...defaultPipe, ...pipe };
+};
+
 const ImportButton = () => {
-  const fileInputRef = useRef(null);
-  const { setNodes, setPipes } = useStore();
-
-  const handleImportClick = () => {
-    fileInputRef.current.click();
-  };
-
-  const validateAndProcessFile = (data) => {
-    if (typeof data !== 'object' || data === null || !Array.isArray(data.nodes) || !Array.isArray(data.pipes)) {
-      alert('Ошибка: Неверный формат файла. Убедитесь, что он содержит массивы "nodes" и "pipes".');
-      return;
-    }
-
-    const newNodes = data.nodes.map(node => {
-      if (!node.id || !node.type || (node.x === undefined && node.lng === undefined) || (node.y === undefined && node.lat === undefined)) {
-        throw new Error(`Неверный узел: Отсутствуют обязательные поля (id, type, x/lng, y/lat).`);
-      }
-      return {
-        id: node.id,
-        name: node.name || 'Безымянный узел',
-        nodeType: node.type,
-        elevation: node.elevation || 0,
-        lat: node.y ?? node.lat,
-        lng: node.x ?? node.lng,
-        type: 'node',
-      };
-    });
-
-    const nodesMap = new Map(newNodes.map(n => [n.id, n]));
-    const newPipes = data.pipes.map(pipe => {
-      if (!pipe.id || !pipe.start_node_id || !pipe.end_node_id) {
-        throw new Error(`Неверная труба: Отсутствуют обязательные поля (id, start_node_id, end_node_id).`);
-      }
-
-      const startNode = nodesMap.get(pipe.start_node_id);
-      const endNode = nodesMap.get(pipe.end_node_id);
-
-      if (!startNode) console.warn(`Труба "${pipe.id}" ссылается на несуществующий начальный узел "${pipe.start_node_id}".`);
-      if (!endNode) console.warn(`Труба "${pipe.id}" ссылается на несуществующий конечный узел "${pipe.end_node_id}".`);
-
-      let vertices = pipe.vertices;
-      if (!vertices && startNode && endNode) {
-        console.log(`Труба "${pipe.id}" не содержит вершин. Генерация из узлов.`);
-        vertices = [[startNode.lat, startNode.lng], [endNode.lat, endNode.lng]];
-      }
-      
-      return {
-        id: pipe.id,
-        startNodeId: pipe.start_node_id,
-        endNodeId: pipe.end_node_id,
-        length: pipe.length || 0,
-        diameter: pipe.diameter || 100,
-        material: pipe.material || 'steel',
-        type: 'pipe',
-        vertices: vertices || [],
-      };
-    });
-
-    setNodes(newNodes);
-    setPipes(newPipes);
-    alert('Данные успешно импортированы!');
-  };
+  const { setNodes, setPipes, clearProject } = useStore();
+  const fileInputRef = useRef(null); // Создаем ссылку на input
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -72,23 +23,49 @@ const ImportButton = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = JSON.parse(e.target.result);
-        validateAndProcessFile(data);
+        const { nodes, pipes } = JSON.parse(e.target.result);
+        if (!Array.isArray(nodes) || !Array.isArray(pipes)) throw new Error("Неверный формат данных");
+
+        const hydratedNodes = nodes.map(hydrateNode);
+        const hydratedPipes = pipes.map(hydratePipe);
+
+        const nodeIds = new Set(hydratedNodes.map(n => n.id));
+        for (const pipe of hydratedPipes) {
+          if (!nodeIds.has(pipe.startNodeId) || !nodeIds.has(pipe.endNodeId)) {
+            throw new Error(`Ошибка целостности: труба ${pipe.id} ссылается на несуществующий узел.`);
+          }
+        }
+
+        clearProject();
+        setNodes(hydratedNodes);
+        setPipes(hydratedPipes);
+        alert('Проект успешно импортирован!');
+
       } catch (error) {
         console.error("Ошибка импорта:", error);
-        alert(`Не удалось импортировать файл: ${error.message}`);
+        alert(`Ошибка импорта: ${error.message}`);
       }
     };
     reader.readAsText(file);
     event.target.value = null;
   };
 
+  const handleClick = () => {
+    fileInputRef.current.click(); // Симулируем клик по скрытому input
+  };
+
   return (
     <>
-      <button className="import-btn" onClick={handleImportClick}>
+      <button className="import-btn" onClick={handleClick}>
         Импорт JSON
       </button>
-      <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" style={{ display: 'none' }} />
+      <input 
+        type="file" 
+        accept=".json" 
+        onChange={handleFileChange} 
+        style={{ display: 'none' }} 
+        ref={fileInputRef} 
+      />
     </>
   );
 };

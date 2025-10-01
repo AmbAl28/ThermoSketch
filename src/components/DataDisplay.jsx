@@ -20,9 +20,11 @@ const DataDisplay = () => {
     consumer: 'Потребители',
     chamber: 'Камеры',
     node: 'Узлы',
+    diameter_change: 'Смена диаметра',
+    valve: 'Задвижка',
   };
 
-  const displayOrder = ['source', 'consumer', 'chamber', 'node'];
+  const displayOrder = ['source', 'consumer', 'chamber', 'node', 'diameter_change', 'valve'];
 
   // Сортируем ключи для консистентного отображения
   const sortedNodeTypes = Object.keys(nodeCountsByType).sort((a, b) => {

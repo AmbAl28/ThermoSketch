@@ -1,57 +1,47 @@
-import React from 'react';
 import useStore from '../useStore';
 
 const ExportButton = () => {
-  const handleExport = () => {
-    const { nodes, pipes } = useStore.getState();
+  const { nodes, pipes } = useStore();
 
-    const exportData = {
-      schema_version: '1.2', // Версия схемы обновлена для отражения новых полей
-      project_name: 'Проект тепловой сети',
+  const handleExport = () => {
+    const dataToExport = {
       nodes: nodes.map(node => ({
         id: node.id,
+        lat: node.lat,
+        lng: node.lng,
         name: node.name,
-        type: node.nodeType, 
+        type: node.type,
+        nodeType: node.nodeType,
         elevation: node.elevation,
-        x: node.lng, 
-        y: node.lat,
-        // Добавляем все параметры в соответствующий объект
-        parameters: {
-          contractNumber: node.contractNumber,
-          note: node.note,
-          heatLoad: node.heatLoad,
-          staticPressure: node.staticPressure,
-          supplyTemperature: node.supplyTemperature,
-          returnTemperature: node.returnTemperature,
-        },
+        contractNumber: node.contractNumber,
+        note: node.note,
+        heatLoad: node.heatLoad,
+        staticPressure: node.staticPressure,
+        supplyTemperature: node.supplyTemperature,
+        returnTemperature: node.returnTemperature,
       })),
       pipes: pipes.map(pipe => ({
         id: pipe.id,
-        start_node_id: pipe.startNodeId,
-        end_node_id: pipe.endNodeId,
+        startNodeId: pipe.startNodeId,
+        endNodeId: pipe.endNodeId,
+        type: pipe.type,
+        vertices: pipe.vertices,
         length: pipe.length,
         diameter: pipe.diameter,
-        // Также добавляем ранее созданные поля для труб для полноты данных
-        actual_length: pipe.actualLength,
         material: pipe.material,
-        insulation_material: pipe.insulationMaterial,
-        insulation_wear: pipe.insulationWear,
-        vertices: pipe.vertices,
+        actualLength: pipe.actualLength,
+        insulationMaterial: pipe.insulationMaterial,
+        insulationWear: pipe.insulationWear,
       })),
     };
 
-    const jsonString = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'config-teploseti-v1.2.json'; // Имя файла обновлено
-    document.body.appendChild(a);
-    a.click();
-
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(dataToExport, null, 2)
+    )}`;
+    const link = document.createElement('a');
+    link.href = jsonString;
+    link.download = 'thermal-network-project.json';
+    link.click();
   };
 
   return (
