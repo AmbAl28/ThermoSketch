@@ -83,13 +83,14 @@ const Map = ({ drawingMode, setDrawingMode }) => {
       <DrawingHandler drawingMode={drawingMode} setDrawingMode={setDrawingMode} />
       
       {pipes.map(pipe => {
-          const isEditing = pipe.id === editingPipeId;
+          // Вся логика отрисовки редактируемой трубы теперь в DrawingHandler
+          if (pipe.id === editingPipeId) return null;
+
           return (
             <Polyline 
                 key={pipe.id}
                 positions={pipe.vertices}
-                color={isEditing ? '#FFC107' : '#0000ff'} // Желтый, если редактируется
-                weight={isEditing ? 6 : 4}
+                pathOptions={{ color: '#3388ff', weight: 5 }}
                 eventHandlers={{
                     click: (e) => {
                         if (movingNodeId || editingPipeId) {
@@ -113,19 +114,16 @@ const Map = ({ drawingMode, setDrawingMode }) => {
             click: (e) => {
                 L.DomEvent.stopPropagation(e);
 
-                // Логика привязки конечной точки трубы
                 if (isMovingEndpoint) {
                     const disallowedNodeId = selectedVertexIndex === 0 ? editingPipe.endNodeId : editingPipe.startNodeId;
                     if (node.id === disallowedNodeId) {
-                        // Нельзя привязать трубу саму к себе
                         return; 
                     }
                     updatePipeEndpoint(editingPipeId, selectedVertexIndex, node.id, [node.lat, node.lng]);
-                    setSelectedVertexIndex(null); // Завершаем перемещение
-                    return; // Прерываем дальнейшее выполнение
+                    setSelectedVertexIndex(null); 
+                    return; 
                 }
 
-              // Остальная логика клика по узлу
               if (movingNodeId || drawingMode === 'pipe' || editingPipeId) {
                 return;
               }

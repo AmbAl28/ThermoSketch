@@ -6,6 +6,7 @@ import VertexMarker from './VertexMarker';
 
 const SNAPPING_RADIUS = 30;
 const MIN_PIPE_LENGTH = 1; // Минимальная длина трубы в метрах
+const VERTEX_PANE = 'vertex-pane'; // Имя для нашей новой панели
 
 const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
   const { 
@@ -24,6 +25,15 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
     setSelectedVertexIndex, 
   } = useStore();
   const map = useMap();
+
+  // --- Создаем выделенную панель для вершин ---
+  useEffect(() => {
+    const pane = map.getPane(VERTEX_PANE);
+    if (!pane) {
+      map.createPane(VERTEX_PANE);
+      map.getPane(VERTEX_PANE).style.zIndex = 650; // z-index маркеров по умолчанию 400
+    }
+  }, [map]);
 
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentVertices, setCurrentVertices] = useState([]);
@@ -157,6 +167,33 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
     }
   };
 
+  const handlePolylineClick = (e) => {
+    if (!editingPipe || editingMode !== 'add') return;
+    L.DomEvent.stopPropagation(e);
+
+    let closestPoint = null;
+    let segmentIndex = -1;
+    let minDistance = Infinity;
+
+    for (let i = 0; i < editingPipe.vertices.length - 1; i++) {
+      const start = L.latLng(editingPipe.vertices[i]);
+      const end = L.latLng(editingPipe.vertices[i + 1]);
+      const point = getClosestPointOnSegment(e.latlng, start, end);
+      const distance = e.latlng.distanceTo(point);
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPoint = point;
+        segmentIndex = i;
+      }
+    }
+    if (closestPoint && segmentIndex !== -1) {
+      const newVertices = [...editingPipe.vertices];
+      newVertices.splice(segmentIndex + 1, 0, [closestPoint.lat, closestPoint.lng]);
+      updatePipeVertices(editingPipeId, newVertices);
+    }
+  }
+
   useMapEvents({
     click(e) {
         if (movingNodeId) {
@@ -170,34 +207,6 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
             newVertices[selectedVertexIndex] = [e.latlng.lat, e.latlng.lng];
             updatePipeVertices(editingPipeId, newVertices);
             setSelectedVertexIndex(null);
-            return;
-        }
-
-        if(editingPipeId && editingMode === 'add') {
-            const pipe = useStore.getState().pipes.find(p => p.id === editingPipeId);
-            if (!pipe) return;
-
-            let closestPoint = null;
-            let segmentIndex = -1;
-            let minDistance = Infinity;
-
-            for (let i = 0; i < pipe.vertices.length - 1; i++) {
-              const start = L.latLng(pipe.vertices[i]);
-              const end = L.latLng(pipe.vertices[i + 1]);
-              const point = getClosestPointOnSegment(e.latlng, start, end);
-              const distance = e.latlng.distanceTo(point);
-
-              if (distance < minDistance) {
-                minDistance = distance;
-                closestPoint = point;
-                segmentIndex = i;
-              }
-            }
-            if (closestPoint && segmentIndex !== -1) {
-              const newVertices = [...pipe.vertices];
-              newVertices.splice(segmentIndex + 1, 0, [closestPoint.lat, closestPoint.lng]);
-              updatePipeVertices(editingPipeId, newVertices);
-            }
             return;
         }
 
@@ -231,7 +240,6 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
 
     mousemove(e) {
       setCursorPos(e.latlng);
-      // Только обновляем snappedNode, если мы в режиме перемещения конечной точки
       if (isMovingEndpoint || drawingMode === 'pipe') {
         const nearbyNode = findNearbyNode(e.latlng);
         setSnappedNode(nearbyNode);
@@ -263,7 +271,7 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
             }
             if (selectedVertexIndex !== null) {
                 setSelectedVertexIndex(null);
-                setSnappedNode(null); // Сбрасываем snappedNode
+                setSnappedNode(null); 
             }
             if (editingPipeId) {
                 finishPipeEditing();
@@ -297,14 +305,14 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
           const nextVertex = vertices[selectedVertexIndex + 1];
           movingVertexLine = (
               <>
-                <Polyline positions={[prevVertex, [cursorPos.lat, cursorPos.lng]]} color="#3388ff" dashArray="5, 5" />
-                <Polyline positions={[[cursorPos.lat, cursorPos.lng], nextVertex]} color="#3388ff" dashArray="5, 5" />
+                <Polyline positions={[prevVertex, [cursorPos.lat, cursorPos.lng]]} color="#FFC107" dashArray="5, 5" pane={VERTEX_PANE} />
+                <Polyline positions={[[cursorPos.lat, cursorPos.lng], nextVertex]} color="#FFC107" dashArray="5, 5" pane={VERTEX_PANE} />
               </>
           )
       } else if (isMovingEndpoint) {
         const otherEndIndex = selectedVertexIndex === 0 ? 1 : vertices.length - 2;
         const otherEnd = vertices[otherEndIndex];
-        movingVertexLine = <Polyline positions={[otherEnd, [cursorPos.lat, cursorPos.lng]]} color="#3388ff" dashArray="5, 5" />
+        movingVertexLine = <Polyline positions={[otherEnd, [cursorPos.lat, cursorPos.lng]]} color="#FFC107" dashArray="5, 5" pane={VERTEX_PANE} />
       }
   }
 
@@ -319,11 +327,21 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
       {isDrawing && <Polyline positions={currentVertices} color="#ff0000" />}
       {rubberBandLine}
       {movingVertexLine}
+      
+      {editingPipe && (
+        <Polyline 
+            positions={editingPipe.vertices}
+            pathOptions={{ color: '#FFC107', weight: 6, pane: VERTEX_PANE }} // Используем панель
+            eventHandlers={{ click: handlePolylineClick }}
+        />
+      )}
+
       {snappedNode && (drawingMode === 'pipe' || isMovingEndpoint) && (
           <Marker 
             position={[snappedNode.lat, snappedNode.lng]} 
             icon={snappedNodeIcon} 
             interactive={false} 
+            pane={VERTEX_PANE} // Снаппинг тоже на верхнюю панель
           />
       )}
       
@@ -334,6 +352,7 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
           isVisible={true} 
           isSelected={selectedVertexIndex === index}
           onClick={() => handleVertexClick(index)}
+          pane={VERTEX_PANE} // Передаем имя панели
         />
       ))}
     </>

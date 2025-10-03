@@ -1,22 +1,24 @@
 import { CircleMarker } from 'react-leaflet';
+import L from 'leaflet';
 
-const VertexMarker = ({ center, isVisible, isSelected, onClick }) => {
+const VertexMarker = ({ center, isVisible, isSelected, onClick, pane }) => {
   if (!isVisible) {
     return null;
   }
 
   const style = {
-    color: isSelected ? '#FFC107' : '#fff',
+    color: isSelected ? '#FFA000' : '#FFC107', 
     weight: 2,
-    fillColor: isSelected ? '#FF9800' : '#03a9f4',
+    fillColor: '#FFD54F', 
     fillOpacity: 1,
   };
 
   return (
     <CircleMarker
       center={center}
-      radius={6} // Сделаем маркер чуть больше
+      radius={7} 
       pathOptions={style}
+      pane={pane} // <<< ИСПОЛЬЗУЕМ ПЕРЕДАННУЮ ПАНЕЛЬ
       eventHandlers={{
         click: (e) => {
             L.DomEvent.stopPropagation(e);
