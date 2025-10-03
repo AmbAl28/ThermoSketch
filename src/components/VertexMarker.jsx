@@ -1,3 +1,4 @@
+import React from 'react';
 import { CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 
