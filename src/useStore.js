@@ -56,6 +56,8 @@ const useStore = create(
       selectedObject: null,
       isPanelCollapsed: false,
       movingNodeId: null,
+      editingPipeId: null,
+      editingMode: null,
 
       setNodes: (nodes) => set({ nodes }),
       setPipes: (pipes) => set({ pipes }),
@@ -168,11 +170,31 @@ const useStore = create(
       },
         
       togglePanel: () => set(state => ({ isPanelCollapsed: !state.isPanelCollapsed })), 
+
+      startPipeEditing: (pipeId) => set({ editingPipeId: pipeId, editingMode: null }),
+      setEditingMode: (mode) => set({ editingMode: mode }),
+      finishPipeEditing: () => set({ editingPipeId: null, editingMode: null }),
+
+      updatePipeVertices: (pipeId, vertices) => set((state) => ({
+        pipes: state.pipes.map(pipe =>
+          pipe.id === pipeId
+            ? {
+                ...pipe,
+                vertices,
+                length: calculatePipeLength(vertices),
+              }
+            : pipe
+        ),
+      })),
     }),
     {
       name: 'thermal-network-storage',
       storage: createJSONStorage(() => safeJsonStorage),
-      partialize: (state) => ({ nodes: state.nodes, pipes: state.pipes, isPanelCollapsed: state.isPanelCollapsed }),
+      partialize: (state) => ({ 
+          nodes: state.nodes, 
+          pipes: state.pipes, 
+          isPanelCollapsed: state.isPanelCollapsed,
+        }),
     }
   )
 );

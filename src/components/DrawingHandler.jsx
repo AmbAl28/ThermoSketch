@@ -2,12 +2,25 @@ import { useState, useEffect, useCallback } from 'react';
 import { useMap, useMapEvents, Polyline, Marker } from 'react-leaflet';
 import L from 'leaflet';
 import useStore from '../useStore';
+import VertexMarker from './VertexMarker';
 
 const SNAPPING_RADIUS = 30;
 const MIN_PIPE_LENGTH = 1; // Минимальная длина трубы в метрах
 
 const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
-  const { nodes, addNode, addPipe, movingNodeId, setMovingNodeId, updateNodePosition } = useStore();
+  const { 
+    nodes, 
+    pipes, 
+    addNode, 
+    addPipe, 
+    movingNodeId, 
+    setMovingNodeId, 
+    updateNodePosition, 
+    editingPipeId, 
+    editingMode, 
+    updatePipeVertices,
+    finishPipeEditing
+  } = useStore();
   const map = useMap();
 
   const [isDrawing, setIsDrawing] = useState(false);
@@ -15,18 +28,30 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
   const [cursorPos, setCursorPos] = useState(null);
   const [startNodeId, setStartNodeId] = useState(null);
   const [snappedNode, setSnappedNode] = useState(null);
+  const [selectedVertexIndex, setSelectedVertexIndex] = useState(null);
+
+  const editingPipe = pipes.find(p => p.id === editingPipeId);
+
+  useEffect(() => {
+    if (editingMode !== 'move') {
+      setSelectedVertexIndex(null);
+    }
+  }, [editingMode]);
+
 
   useEffect(() => {
     const mapContainer = map.getContainer();
-    if (movingNodeId) {
+    if (movingNodeId || (editingPipeId && !selectedVertexIndex)) {
       mapContainer.style.cursor = 'crosshair';
+    } else if (editingPipeId && selectedVertexIndex !== null) {
+        mapContainer.style.cursor = 'pointer';
     } else {
       mapContainer.style.cursor = ''; 
     }
     return () => {
       mapContainer.style.cursor = '';
     };
-  }, [movingNodeId, map]);
+  }, [movingNodeId, editingPipeId, map, selectedVertexIndex]);
 
   const findNearbyNode = useCallback((latlng) => {
     let nearestNode = null;
@@ -63,9 +88,8 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
       return;
     }
 
-    // ПРОВЕРКА: Нельзя завершить трубу на начальном узле без промежуточных точек
     if (endNode.id === startNodeId && currentVertices.length === 1) {
-        return; // Просто игнорируем, позволяя пользователю продолжить рисование
+        return;
     }
 
     const finalVertices = [...currentVertices, [endNode.lat, endNode.lng]];
@@ -77,9 +101,8 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
       totalLength += L.latLng(lat1, lng1).distanceTo(L.latLng(lat2, lng2));
     }
 
-    // ПРОВЕРКА: Минимальная длина трубы
     if (totalLength < MIN_PIPE_LENGTH) {
-        return; // Игнорируем, если длина слишком мала
+        return;
     }
     
     addPipe({
@@ -92,11 +115,82 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
     resetDrawing();
   }, [isDrawing, startNodeId, currentVertices, addPipe, resetDrawing]);
 
+  const getClosestPointOnSegment = (point, start, end) => {
+    const mapSize = map.getSize();
+    const pointPx = map.latLngToContainerPoint(point);
+    const startPx = map.latLngToContainerPoint(start);
+    const endPx = map.latLngToContainerPoint(end);
+  
+    const segmentLengthSq = startPx.distanceTo(endPx) ** 2;
+    if (segmentLengthSq === 0) return map.containerPointToLatLng(startPx);
+  
+    let t = ((pointPx.x - startPx.x) * (endPx.x - startPx.x) + (pointPx.y - startPx.y) * (endPx.y - startPx.y)) / segmentLengthSq;
+    t = Math.max(0, Math.min(1, t)); 
+
+    const closestPointPx = L.point(
+      startPx.x + t * (endPx.x - startPx.x),
+      startPx.y + t * (endPx.y - startPx.y)
+    );
+  
+    return map.containerPointToLatLng(closestPointPx);
+  };
+
+  const handleVertexClick = (index) => {
+    if (!editingPipe) return;
+
+    if (editingMode === 'move') {
+      setSelectedVertexIndex(index);
+    } else if (editingMode === 'delete') {
+        if(index === 0 || index === editingPipe.vertices.length - 1) {
+            alert('Нельзя удалить вершины, привязанные к узлам');
+            return;
+        }
+      const newVertices = editingPipe.vertices.filter((_, i) => i !== index);
+      updatePipeVertices(editingPipeId, newVertices);
+    }
+  };
+
   useMapEvents({
     click(e) {
         if (movingNodeId) {
             updateNodePosition(movingNodeId, e.latlng);
             setMovingNodeId(null);
+            return;
+        }
+
+        if (editingPipeId && editingMode === 'move' && selectedVertexIndex !== null) {
+            const newVertices = [...editingPipe.vertices];
+            newVertices[selectedVertexIndex] = [e.latlng.lat, e.latlng.lng];
+            updatePipeVertices(editingPipeId, newVertices);
+            setSelectedVertexIndex(null);
+            return;
+        }
+
+        if(editingPipeId && editingMode === 'add') {
+            const pipe = useStore.getState().pipes.find(p => p.id === editingPipeId);
+            if (!pipe) return;
+
+            let closestPoint = null;
+            let segmentIndex = -1;
+            let minDistance = Infinity;
+
+            for (let i = 0; i < pipe.vertices.length - 1; i++) {
+              const start = L.latLng(pipe.vertices[i]);
+              const end = L.latLng(pipe.vertices[i + 1]);
+              const point = getClosestPointOnSegment(e.latlng, start, end);
+              const distance = e.latlng.distanceTo(point);
+
+              if (distance < minDistance) {
+                minDistance = distance;
+                closestPoint = point;
+                segmentIndex = i;
+              }
+            }
+            if (closestPoint && segmentIndex !== -1) {
+              const newVertices = [...pipe.vertices];
+              newVertices.splice(segmentIndex + 1, 0, [closestPoint.lat, closestPoint.lng]);
+              updatePipeVertices(editingPipeId, newVertices);
+            }
             return;
         }
 
@@ -162,6 +256,12 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
             if (movingNodeId) {
                 setMovingNodeId(null);
             }
+            if (selectedVertexIndex !== null) {
+                setSelectedVertexIndex(null);
+            }
+            if (editingPipeId) {
+                finishPipeEditing();
+            }
         }
         if (e.key === 'Enter' && cursorPos) {
             const nearbyNode = findNearbyNode(cursorPos);
@@ -175,7 +275,7 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [cursorPos, findNearbyNode, finishDrawing, resetDrawing, isDrawing, movingNodeId, setMovingNodeId]);
+  }, [cursorPos, findNearbyNode, finishDrawing, resetDrawing, isDrawing, movingNodeId, setMovingNodeId, selectedVertexIndex, editingPipeId, finishPipeEditing]);
 
   let rubberBandLine = null;
   if (isDrawing && cursorPos && currentVertices.length > 0) {
@@ -193,6 +293,16 @@ const DrawingHandler = ({ drawingMode, setDrawingMode }) => {
       {isDrawing && <Polyline positions={currentVertices} color="#ff0000" />}
       {rubberBandLine}
       {snappedNode && drawingMode === 'pipe' && <Marker position={[snappedNode.lat, snappedNode.lng]} icon={snappedNodeIcon} interactive={false} />}
+      
+      {editingPipe && editingPipe.vertices.map((vertex, index) => (
+        <VertexMarker 
+          key={index} 
+          center={vertex} 
+          isVisible={true} 
+          isSelected={selectedVertexIndex === index}
+          onClick={() => handleVertexClick(index)}
+        />
+      ))}
     </>
   );
 };

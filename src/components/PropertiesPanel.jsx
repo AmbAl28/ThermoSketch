@@ -1,11 +1,30 @@
 import useStore from '../useStore';
 
 const PropertiesPanel = () => {
-  const { selectedObject, setSelectedObject, updateNode, updatePipe, deleteObject, movingNodeId, setMovingNodeId } = useStore();
+  const { 
+    selectedObject, 
+    setSelectedObject, 
+    updateNode, 
+    updatePipe, 
+    deleteObject, 
+    movingNodeId, 
+    setMovingNodeId,
+    editingPipeId,
+    editingMode,
+    startPipeEditing,
+    setEditingMode,
+    finishPipeEditing
+  } = useStore();
 
   const handleMoveClick = () => {
     if (selectedObject && selectedObject.type === 'node') {
       setMovingNodeId(selectedObject.id);
+    }
+  };
+
+  const handleStartEditing = () => {
+    if (selectedObject && selectedObject.type === 'pipe') {
+      startPipeEditing(selectedObject.id);
     }
   };
 
@@ -32,7 +51,10 @@ const PropertiesPanel = () => {
       );
   }
 
-  const handleClose = () => setSelectedObject(null);
+  const handleClose = () => {
+    finishPipeEditing();
+    setSelectedObject(null);
+  };
 
   const handleDelete = () => {
     if (window.confirm(`Вы уверены, что хотите удалить этот ${isNode ? 'узел' : 'участок'}? Это действие нельзя отменить.`)) {
@@ -128,24 +150,44 @@ const PropertiesPanel = () => {
     </>
   );
 
+  const isEditingPipe = editingPipeId === data.id;
+
   return (
     <div className="properties-panel">
-      <h4>{isNode ? 'Редактирование узла' : 'Редактирование трубы'}</h4>
+      <h4>{isNode ? 'Редактирование узла' : (isEditingPipe ? 'Редактирование конфигурации' : 'Редактирование трубы')}</h4>
       <p>ID: {data.id}</p>
       <form>
-        {isNode ? renderNodeForm() : renderPipeForm()}
+        {isEditingPipe ? (
+          <div className="edit-mode-controls">
+            <p>Режим редактирования: <strong>{editingMode || 'Не выбран'}</strong></p>
+            <button type="button" onClick={() => setEditingMode('add')} className={editingMode === 'add' ? 'active' : ''}>Добавить вершину</button>
+            <button type="button" onClick={() => setEditingMode('move')} className={editingMode === 'move' ? 'active' : ''}>Переместить вершину</button>
+            <button type="button" onClick={() => setEditingMode('delete')} className={editingMode === 'delete' ? 'active' : ''}>Удалить вершину</button>
+            <button type="button" className="finish-btn" onClick={finishPipeEditing}>Завершить</button>
+          </div>
+        ) : (
+          isNode ? renderNodeForm() : renderPipeForm()
+        )}
 
         {movingNodeId === data.id && 
             <p className="move-tooltip">Нажмите Escape для отмены</p>
         }
 
         <div className="form-buttons">
-          {isNode && (
-            <button type="button" className="move-btn" onClick={handleMoveClick} disabled={!!movingNodeId}>
-              {movingNodeId === data.id ? 'Выберите новое место' : 'Переместить'}
-            </button>
+          {!isEditingPipe && (
+            <>
+              {isNode ? (
+                <button type="button" className="move-btn" onClick={handleMoveClick} disabled={!!movingNodeId}>
+                  {movingNodeId === data.id ? 'Выберите новое место' : 'Переместить'}
+                </button>
+              ) : (
+                <button type="button" className="edit-btn" onClick={handleStartEditing}>
+                  Редактировать конфигурацию
+                </button>
+              )}
+              <button type="button" className="delete-btn" onClick={handleDelete}>Удалить</button>
+            </>
           )}
-          <button type="button" className="delete-btn" onClick={handleDelete}>Удалить</button>
           <button type="button" className="close-btn" onClick={handleClose}>Закрыть</button>
         </div>
       </form>
