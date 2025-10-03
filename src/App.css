@@ -182,77 +182,40 @@
   min-height: 60px; 
 }
 
-/* --- ОБНОВЛЕННЫЕ Стили для контейнера кнопок --- */
-.form-buttons, .edit-mode-controls {
-  margin-top: 15px;
-  display: flex;
-  flex-wrap: wrap; 
-  gap: 10px; 
-}
-
-.edit-mode-controls {
-  flex-direction: column;
-}
-
-.form-buttons button,
-.edit-mode-controls button {
-  flex-grow: 1; 
-  min-width: 100px; 
-  padding: 10px;
-  border: none;
-  cursor: pointer;
-  border-radius: 3px;
-  transition: background-color 0.2s;
-  font-size: 0.9em;
-  text-align: center;
-}
-
-.delete-btn {
+/* --- Специальные стили для кнопок внутри панели свойств --- */
+.properties-panel .controls .delete-btn {
   background-color: #dc3545;
   color: white;
 }
-.delete-btn:hover {
+.properties-panel .controls .delete-btn:hover {
   background-color: #c82333;
 }
 
-.close-btn {
+.properties-panel .controls .close-btn {
   background-color: #6c757d;
   color: white;
 }
-.close-btn:hover {
+.properties-panel .controls .close-btn:hover {
   background-color: #5a6268;
 }
 
-.move-btn, 
-.edit-btn,
-.finish-btn,
-.edit-mode-controls button {
+.properties-panel .controls .move-btn, 
+.properties-panel .controls .edit-btn,
+.properties-panel .controls .finish-btn {
   background-color: #ffc107;
   color: #212529;
 }
 
-.move-btn:hover, 
-.edit-btn:hover,
-.finish-btn:hover,
-.edit-mode-controls button:hover {
+.properties-panel .controls .move-btn:hover, 
+.properties-panel .controls .edit-btn:hover,
+.properties-panel .controls .finish-btn:hover {
   background-color: #e0a800;
 }
 
-.move-btn:disabled {
+.properties-panel .controls .move-btn:disabled {
   background-color: #e9ecef;
   color: #6c757d;
   cursor: not-allowed;
-}
-
-.edit-mode-controls p {
-    margin: 0 0 5px 0;
-    font-size: 0.9em;
-    text-align: center;
-}
-
-.edit-mode-controls button.active {
-  background-color: #007bff !important;
-  color: white !important;
 }
 
 .move-tooltip {

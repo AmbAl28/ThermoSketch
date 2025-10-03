@@ -158,15 +158,14 @@ const PropertiesPanel = () => {
       <p>ID: {data.id}</p>
       
       {isEditingPipe ? (
-        <div className="edit-mode-controls">
-          <p>Режим: <strong>{editingMode || 'Не выбран'}</strong></p>
+        <div className="controls">
           <button onClick={() => setEditingMode('add')} className={editingMode === 'add' ? 'active' : ''}>Добавить вершину</button>
           <button onClick={() => setEditingMode('move')} className={editingMode === 'move' ? 'active' : ''}>Переместить вершину</button>
           <button onClick={() => setEditingMode('delete')} className={editingMode === 'delete' ? 'active' : ''}>Удалить вершину</button>
           <button className="finish-btn" onClick={finishPipeEditing}>Завершить</button>
         </div>
       ) : (
-        <div className="form-buttons">
+        <div className="controls">
           {isNode ? (
             <>
               <button className="move-btn" onClick={handleMoveClick} disabled={!!movingNodeId}>
