@@ -23,18 +23,16 @@ const nodeIconConfig = {
 
 const getMarkerIcon = (nodeType, isMoving) => {
   const config = nodeIconConfig[nodeType] || nodeIconConfig.default;
-  const iconSize = 20;
-  const fontSize = 12;
   const html = `
     <div style=\"
       background-color: ${isMoving ? '#FFC107' : config.color};
-      width: ${iconSize}px;
-      height: ${iconSize}px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       display: flex;
       justify-content: center;
       align-items: center;
-      font-size: ${fontSize}px;
+      font-size: 12px;
       border: 1.5px solid #fff;
       box-shadow: 0 0 4px rgba(0,0,0,0.5);
     \">
@@ -43,10 +41,10 @@ const getMarkerIcon = (nodeType, isMoving) => {
   `;
   return L.divIcon({
     html: html,
-    className: 'custom-emoji-icon',
-    iconSize: [iconSize, iconSize],
-    iconAnchor: [iconSize / 2, iconSize / 2],
-    popupAnchor: [0, -iconSize / 2]
+    className: 'custom-marker-icon',
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -10]
   });
 };
 
@@ -59,7 +57,11 @@ const Map = ({ drawingMode, setDrawingMode }) => {
     editingPipeId,
     selectedVertexIndex,
     setSelectedVertexIndex,
-    updatePipeEndpoint
+    updatePipeEndpoint, 
+    // --- Получаем новые actions из store ---
+    isDrawing,
+    startDrawing,
+    finishDrawing
   } = useStore(state => state);
 
   const bounds = [
@@ -80,10 +82,10 @@ const Map = ({ drawingMode, setDrawingMode }) => {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
 
+      {/* Передаем setDrawingMode для сброса режима после завершения */}
       <DrawingHandler drawingMode={drawingMode} setDrawingMode={setDrawingMode} />
       
       {pipes.map(pipe => {
-          // Вся логика отрисовки редактируемой трубы теперь в DrawingHandler
           if (pipe.id === editingPipeId) return null;
 
           return (
@@ -93,7 +95,7 @@ const Map = ({ drawingMode, setDrawingMode }) => {
                 pathOptions={{ color: '#3388ff', weight: 5 }}
                 eventHandlers={{
                     click: (e) => {
-                        if (movingNodeId || editingPipeId) {
+                        if (movingNodeId || editingPipeId || isDrawing) {
                             L.DomEvent.stopPropagation(e);
                             return;
                         }
@@ -112,22 +114,36 @@ const Map = ({ drawingMode, setDrawingMode }) => {
           icon={getMarkerIcon(node.nodeType, node.id === movingNodeId)}
           eventHandlers={{
             click: (e) => {
-                L.DomEvent.stopPropagation(e);
+              L.DomEvent.stopPropagation(e); // Всегда останавливаем всплытие
 
-                if (isMovingEndpoint) {
-                    const disallowedNodeId = selectedVertexIndex === 0 ? editingPipe.endNodeId : editingPipe.startNodeId;
-                    if (node.id === disallowedNodeId) {
-                        return; 
-                    }
-                    updatePipeEndpoint(editingPipeId, selectedVertexIndex, node.id, [node.lat, node.lng]);
-                    setSelectedVertexIndex(null); 
-                    return; 
+              // --- НОВАЯ ЛОГИКА РИСОВАНИЯ ---
+              if (drawingMode === 'pipe') {
+                if (!isDrawing) {
+                  startDrawing(node); // Начинаем рисовать с этого узла
+                } else {
+                  finishDrawing(node); // Заканчиваем рисовать на этом узле
+                  setDrawingMode('none'); // Сбрасываем режим в UI
                 }
+                return;
+              }
+              // --------------------------------
 
-              if (movingNodeId || drawingMode === 'pipe' || editingPipeId) {
+              // Логика привязки конечной точки трубы к узлу
+              if (isMovingEndpoint) {
+                const disallowedNodeId = selectedVertexIndex === 0 ? editingPipe.endNodeId : editingPipe.startNodeId;
+                if (node.id === disallowedNodeId) return;
+                
+                updatePipeEndpoint(editingPipeId, selectedVertexIndex, node.id, [node.lat, node.lng]);
+                setSelectedVertexIndex(null); 
+                return; 
+              }
+
+              // Блокируем выбор узла, если активен другой режим
+              if (movingNodeId || editingPipeId) {
                 return;
               }
 
+              // Действие по умолчанию: выбрать узел
               setSelectedObject({ id: node.id, type: 'node' });
             },
           }}
