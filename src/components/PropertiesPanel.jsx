@@ -156,40 +156,44 @@ const PropertiesPanel = () => {
     <div className="properties-panel">
       <h4>{isNode ? 'Редактирование узла' : (isEditingPipe ? 'Редактирование конфигурации' : 'Редактирование трубы')}</h4>
       <p>ID: {data.id}</p>
+      
+      {isEditingPipe ? (
+        <div className="edit-mode-controls">
+          <p>Режим: <strong>{editingMode || 'Не выбран'}</strong></p>
+          <button onClick={() => setEditingMode('add')} className={editingMode === 'add' ? 'active' : ''}>Добавить вершину</button>
+          <button onClick={() => setEditingMode('move')} className={editingMode === 'move' ? 'active' : ''}>Переместить вершину</button>
+          <button onClick={() => setEditingMode('delete')} className={editingMode === 'delete' ? 'active' : ''}>Удалить вершину</button>
+          <button className="finish-btn" onClick={finishPipeEditing}>Завершить</button>
+        </div>
+      ) : (
+        <div className="form-buttons">
+          {isNode ? (
+            <>
+              <button className="move-btn" onClick={handleMoveClick} disabled={!!movingNodeId}>
+                {movingNodeId === data.id ? 'Выберите новое место' : 'Переместить узел'}
+              </button>
+              <button className="delete-btn" onClick={handleDelete}>Удалить узел</button>
+            </>
+          ) : (
+            <>
+              <button className="edit-btn" onClick={handleStartEditing}>
+                Редактировать конфигурацию
+              </button>
+              <button className="delete-btn" onClick={handleDelete}>Удалить трубу</button>
+            </>
+          )}
+           <button className="close-btn" onClick={handleClose}>Закрыть редактирование</button>
+        </div>
+      )}
+
       <form>
-        {isEditingPipe ? (
-          <div className="edit-mode-controls">
-            <p>Режим редактирования: <strong>{editingMode || 'Не выбран'}</strong></p>
-            <button type="button" onClick={() => setEditingMode('add')} className={editingMode === 'add' ? 'active' : ''}>Добавить вершину</button>
-            <button type="button" onClick={() => setEditingMode('move')} className={editingMode === 'move' ? 'active' : ''}>Переместить вершину</button>
-            <button type="button" onClick={() => setEditingMode('delete')} className={editingMode === 'delete' ? 'active' : ''}>Удалить вершину</button>
-            <button type="button" className="finish-btn" onClick={finishPipeEditing}>Завершить</button>
-          </div>
-        ) : (
+        {!isEditingPipe && (
           isNode ? renderNodeForm() : renderPipeForm()
         )}
 
         {movingNodeId === data.id && 
             <p className="move-tooltip">Нажмите Escape для отмены</p>
         }
-
-        <div className="form-buttons">
-          {!isEditingPipe && (
-            <>
-              {isNode ? (
-                <button type="button" className="move-btn" onClick={handleMoveClick} disabled={!!movingNodeId}>
-                  {movingNodeId === data.id ? 'Выберите новое место' : 'Переместить'}
-                </button>
-              ) : (
-                <button type="button" className="edit-btn" onClick={handleStartEditing}>
-                  Редактировать конфигурацию
-                </button>
-              )}
-              <button type="button" className="delete-btn" onClick={handleDelete}>Удалить</button>
-            </>
-          )}
-          <button type="button" className="close-btn" onClick={handleClose}>Закрыть</button>
-        </div>
       </form>
     </div>
   );

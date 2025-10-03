@@ -167,7 +167,7 @@
 
 .properties-panel form input,
 .properties-panel form select,
-.properties-panel form textarea { /* ОБНОВЛЕНО: Применяем стили и к textarea */
+.properties-panel form textarea {
   width: 100%;
   padding: 8px;
   box-sizing: border-box;
@@ -178,27 +178,33 @@
 }
 
 .properties-panel form textarea {
-  resize: vertical; /* НОВЫЙ СТИЛЬ: Разрешаем изменять размер только по высоте */
-  min-height: 60px; /* Задаем минимальную высоту */
+  resize: vertical; 
+  min-height: 60px; 
 }
 
 /* --- ОБНОВЛЕННЫЕ Стили для контейнера кнопок --- */
-.form-buttons {
-  margin-top: 20px;
+.form-buttons, .edit-mode-controls {
+  margin-top: 15px;
   display: flex;
-  flex-wrap: wrap; /* Разрешаем перенос кнопок, если не помещаются */
-  gap: 10px; /* НОВЫЙ СТИЛЬ: Устанавливаем одинаковый отступ между всеми элементами */
+  flex-wrap: wrap; 
+  gap: 10px; 
 }
 
-.form-buttons button {
-  flex-grow: 1; /* Позволяем кнопкам расти и занимать доступное место */
-  min-width: 100px; /* Минимальная ширина для предотвращения слишком сильного сжатия */
+.edit-mode-controls {
+  flex-direction: column;
+}
+
+.form-buttons button,
+.edit-mode-controls button {
+  flex-grow: 1; 
+  min-width: 100px; 
   padding: 10px;
   border: none;
   cursor: pointer;
   border-radius: 3px;
   transition: background-color 0.2s;
   font-size: 0.9em;
+  text-align: center;
 }
 
 .delete-btn {
@@ -217,12 +223,18 @@
   background-color: #5a6268;
 }
 
-.move-btn {
+.move-btn, 
+.edit-btn,
+.finish-btn,
+.edit-mode-controls button {
   background-color: #ffc107;
   color: #212529;
 }
 
-.move-btn:hover {
+.move-btn:hover, 
+.edit-btn:hover,
+.finish-btn:hover,
+.edit-mode-controls button:hover {
   background-color: #e0a800;
 }
 
@@ -230,6 +242,17 @@
   background-color: #e9ecef;
   color: #6c757d;
   cursor: not-allowed;
+}
+
+.edit-mode-controls p {
+    margin: 0 0 5px 0;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.edit-mode-controls button.active {
+  background-color: #007bff !important;
+  color: white !important;
 }
 
 .move-tooltip {
