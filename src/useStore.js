@@ -58,10 +58,12 @@ const useStore = create(
       movingNodeId: null,
       editingPipeId: null,
       editingMode: null,
+      selectedVertexIndex: null, // <<< НОВОЕ СОСТОЯНИЕ
 
       setNodes: (nodes) => set({ nodes }),
       setPipes: (pipes) => set({ pipes }),
       setMovingNodeId: (nodeId) => set({ movingNodeId: nodeId }),
+      setSelectedVertexIndex: (index) => set({ selectedVertexIndex: index }), // <<< НОВЫЙ ACTION
 
       addNode: (node) => set((state) => ({ 
         nodes: [
@@ -173,7 +175,7 @@ const useStore = create(
 
       startPipeEditing: (pipeId) => set({ editingPipeId: pipeId, editingMode: null }),
       setEditingMode: (mode) => set({ editingMode: mode }),
-      finishPipeEditing: () => set({ editingPipeId: null, editingMode: null }),
+      finishPipeEditing: () => set({ editingPipeId: null, editingMode: null, selectedVertexIndex: null }), // <<< ОБНОВЛЕНО
 
       updatePipeVertices: (pipeId, vertices) => set((state) => ({
         pipes: state.pipes.map(pipe =>
@@ -186,6 +188,35 @@ const useStore = create(
             : pipe
         ),
       })),
+      updatePipeEndpoint: (pipeId, vertexIndex, newNodeId, newPosition) => set((state) => {
+        const newPipes = state.pipes.map(pipe => {
+            if (pipe.id === pipeId) {
+                const newVertices = [...pipe.vertices];
+                let newStartNodeId = pipe.startNodeId;
+                let newEndNodeId = pipe.endNodeId;
+
+                if (vertexIndex === 0) {
+                    newVertices[0] = newPosition;
+                    newStartNodeId = newNodeId;
+                } else if (vertexIndex === pipe.vertices.length - 1) {
+                    newVertices[newVertices.length - 1] = newPosition;
+                    newEndNodeId = newNodeId;
+                } else {
+                    return pipe;
+                }
+
+                return {
+                    ...pipe,
+                    vertices: newVertices,
+                    startNodeId: newStartNodeId,
+                    endNodeId: newEndNodeId,
+                    length: calculatePipeLength(newVertices),
+                };
+            }
+            return pipe;
+        });
+        return { pipes: newPipes };
+      }),
     }),
     {
       name: 'thermal-network-storage',
