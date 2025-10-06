@@ -48,12 +48,13 @@ const DataDisplay = () => {
 
     return (
       <div key={areaId || 'unassigned'}>
-        <h6 onClick={() => setSelectedAreaId(areaId)} style={{cursor: 'pointer', color: area ? area.color : 'inherit'}}>
+        <h6 onClick={() => setSelectedAreaId(areaId)}>
+          <span className="color-swatch" style={{ backgroundColor: area ? area.color : '#ccc' }}></span>
           {area ? area.name : 'Другое'}
         </h6>
         {(objects.nodes.length > 0 || objects.pipes.length > 0) ? (
           <ul>
-            {objects.nodes.map(node => <li key={node.id} onClick={() => setSelectedObject(node)}>{node.name}</li>)}
+            {objects.nodes.map(node => <li key={node.id} onClick={() => setSelectedObject(node)}>{node.name || `Узел ${node.id.substring(0,4)}`}</li>)}
             {objects.pipes.map(pipe => <li key={pipe.id} onClick={() => setSelectedObject(pipe)}>Труба {pipe.id.substring(0,8)}</li>)}
           </ul>
         ) : <p><i>Нет объектов</i></p>}

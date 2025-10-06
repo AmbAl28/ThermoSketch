@@ -15,14 +15,8 @@ function App() {
     isPanelCollapsed, 
     togglePanel, 
     areaCreationMode,
-    selectedAreaId,
-    deleteArea,
-    updateArea,
-    getAreaById,
     toggleAreaCreationMode,
   } = useStore();
-
-  const selectedArea = selectedAreaId ? getAreaById(selectedAreaId) : null;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -67,18 +61,6 @@ function App() {
     if (window.confirm('Вы уверены, что хотите полностью очистить проект? Все данные будут удалены.')) {
       clearProject();
       alert('Проект был успешно очищен.');
-    }
-  };
-
-  const handleAreaNameChange = (e) => {
-    if (selectedArea) {
-      updateArea(selectedArea.id, { name: e.target.value });
-    }
-  };
-
-  const handleAreaDelete = () => {
-    if (selectedArea && window.confirm(`Удалить область "${selectedArea.name}"?`)) {
-      deleteArea(selectedArea.id);
     }
   };
 
@@ -131,20 +113,7 @@ function App() {
           <>
             <hr className="sidebar-divider" />
             <OperationsMenu onClearProject={handleClearProject} />
-            {selectedArea ? (
-              <div className="properties-section">
-                <h3>Свойства области</h3>
-                <label>Название:</label>
-                <input 
-                  type="text" 
-                  value={selectedArea.name} 
-                  onChange={handleAreaNameChange} 
-                />
-                <button onClick={handleAreaDelete} className="delete-button">Удалить область</button>
-              </div>
-            ) : (
-              <PropertiesPanel />
-            )}
+            <PropertiesPanel />
             <DataDisplay />
           </>
         )}

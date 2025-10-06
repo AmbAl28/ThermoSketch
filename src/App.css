@@ -81,6 +81,7 @@
   flex-direction: column;
   gap: 10px;
   width: 100%;
+  margin-top: 20px; /* Добавлен отступ сверху */
 }
 
 .controls button {
@@ -147,7 +148,7 @@
 
 .properties-panel h4 {
   margin-top: 0;
-  margin-bottom: 15px;
+  margin-bottom: 20px; /* Увеличен отступ */
   color: #333;
 }
 
@@ -160,9 +161,10 @@
 .properties-panel form label {
   display: block;
   font-size: 0.9em;
-  margin-top: 10px;
-  margin-bottom: 3px;
+  margin-top: 15px; /* Увеличен отступ */
+  margin-bottom: 5px; /* Увеличен отступ */
   color: #555;
+  font-weight: 600; /* Сделал пожирнее */
 }
 
 .properties-panel form input[type="text"],
@@ -170,27 +172,18 @@
 .properties-panel form select,
 .properties-panel form textarea {
   width: 100%;
-  padding: 8px;
+  padding: 10px; /* Увеличены отступы */
   box-sizing: border-box;
   border: 1px solid #ccc;
   background-color: #fff;
   color: #333;
-  border-radius: 3px;
-}
-
-.properties-panel form input[type="color"] {
-  width: 100%;
-  height: 40px;
-  padding: 0;
-  border: none;
-  cursor: pointer;
+  border-radius: 5px; /* Увеличен радиус */
 }
 
 .properties-panel form textarea {
   resize: vertical; 
   min-height: 60px; 
 }
-
 
 /* --- Специальные стили для кнопок внутри панели свойств --- */
 .properties-panel .controls .delete-btn {
@@ -259,29 +252,65 @@
   border: 1px solid #ddd;
   border-top: none;
   border-radius: 0 0 5px 5px;
-  font-size: 0.9em;
+  font-size: 0.9em; /* Единый размер шрифта */
+  color: #333; /* Единый цвет шрифта */
 }
 
-.data-summary-content h5, .data-summary-content h6 {
+.data-summary-content h5 {
   margin-top: 10px;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  font-weight: bold; /* Жирные заголовки */
   color: #333;
+}
+
+.data-summary-content h6 {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  margin-bottom: 5px;
+  font-weight: normal; /* Обычный вес шрифта */
+  color: #333;
+  cursor: pointer;
+}
+
+.data-summary-content h6:hover {
+    color: #007bff;
+}
+
+.color-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 8px;
+  flex-shrink: 0; /* Предотвращает сжатие маркера */
+  border: 1px solid #ccc;
 }
 
 .data-summary-content ul {
   list-style-type: none;
-  padding-left: 15px;
+  padding-left: 20px; /* Небольшой отступ для вложенности */
   margin: 0;
 }
 
 .data-summary-content li {
-  padding: 2px 0;
+  padding: 3px 0; /* Небольшой отступ */
   cursor: pointer;
   transition: color 0.2s;
+  white-space: nowrap;
 }
 
 .data-summary-content li:hover {
   color: #007bff;
+}
+
+.data-summary-content .summary-divider {
+    margin: 15px 0;
+}
+
+.data-summary-content p i {
+    padding-left: 20px;
+    font-size: 0.9em;
+    color: #888;
 }
 
 /* --- Стили для иконок на карте --- */
