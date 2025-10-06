@@ -43,17 +43,18 @@ const safeJsonStorage = {
 
 const useStore = create(
   persist(
-    (set, get) => ({ // <<< Добавляем get для доступа к состоянию внутри actions
+    (set, get) => ({
       nodes: [],
       pipes: [],
+      areas: [], // Массив для хранения областей
       selectedObject: null,
+      selectedAreaId: null, // ID выбранной области
+      areaCreationMode: false, // Режим создания области
       isPanelCollapsed: false,
       movingNodeId: null,
       editingPipeId: null,
       editingMode: null,
       selectedVertexIndex: null,
-
-      // --- НОВОЕ СОСТОЯНИЕ ДЛЯ РИСОВАНИЯ ---
       isDrawing: false,
       drawingStartNodeId: null,
       drawingVertices: [],
@@ -78,11 +79,11 @@ const useStore = create(
             staticPressure: '',
             supplyTemperature: '',
             returnTemperature: '',
+            areaId: null, // Привязка к области
           }
         ]
       })),
       
-      // --- НОВЫЕ ACTIONS ДЛЯ УПРАВЛЕНИЯ РИСОВАНИЕМ ---
       startDrawing: (node) => {
         set({ 
           isDrawing: true, 
@@ -97,20 +98,20 @@ const useStore = create(
       },
 
       finishDrawing: (endNode) => {
-        const { isDrawing, drawingStartNodeId, drawingVertices, nodes } = get();
+        const { isDrawing, drawingStartNodeId, drawingVertices } = get();
         if (!isDrawing || !drawingStartNodeId || !endNode) {
           get().resetDrawing();
           return;
         }
         if (endNode.id === drawingStartNodeId && drawingVertices.length === 1) {
-          get().resetDrawing(); // Отмена, если начали и закончили на том же узле без промежуточных точек
+          get().resetDrawing();
           return;
         }
 
         const finalVertices = [...drawingVertices, [endNode.lat, endNode.lng]];
         const totalLength = calculatePipeLength(finalVertices);
 
-        if (totalLength < 1) { // Минимальная длина
+        if (totalLength < 1) {
           get().resetDrawing();
           return;
         }
@@ -126,7 +127,8 @@ const useStore = create(
             material: 'Сталь',
             actualLength: '', 
             insulationMaterial: 'ППУ',
-            insulationWear: 0, 
+            insulationWear: 0,
+            areaId: null, // Привязка к области
         };
 
         set(state => ({ pipes: [...state.pipes, newPipe] }));
@@ -136,7 +138,6 @@ const useStore = create(
       resetDrawing: () => {
         set({ isDrawing: false, drawingStartNodeId: null, drawingVertices: [] });
       },
-      // -----------------------------------------------------
 
       addPipe: (pipe) => set((state) => {
         const startNode = state.nodes.find(n => n.id === pipe.startNodeId);
@@ -145,7 +146,7 @@ const useStore = create(
         return { 
             pipes: [
                 ...state.pipes, 
-                { ...pipe, length: calculatePipeLength(pipe.vertices) }
+                { ...pipe, areaId: null, length: calculatePipeLength(pipe.vertices) }
             ]
         };
       }),
@@ -201,7 +202,7 @@ const useStore = create(
         }
       }),
 
-      clearProject: () => set({ nodes: [], pipes: [], selectedObject: null }),
+      clearProject: () => set({ nodes: [], pipes: [], areas: [], selectedObject: null, selectedAreaId: null }),
       togglePanel: () => set(state => ({ isPanelCollapsed: !state.isPanelCollapsed })), 
       startPipeEditing: (pipeId) => set({ editingPipeId: pipeId, editingMode: null }),
       setEditingMode: (mode) => set({ editingMode: mode }),
@@ -234,6 +235,68 @@ const useStore = create(
         });
         return { pipes: newPipes };
       }),
+
+      // --- УПРАВЛЕНИЕ ОБЛАСТЯМИ ---
+      toggleAreaCreationMode: () => set(state => ({ areaCreationMode: !state.areaCreationMode, selectedObject: null })),
+      setSelectedAreaId: (id) => set({ selectedAreaId: id, selectedObject: null }),
+
+      addArea: (bounds, name) => set(state => ({
+        areas: [
+          ...state.areas,
+          {
+            id: crypto.randomUUID(),
+            name: name || `Область ${state.areas.length + 1}`,
+            bounds: bounds,
+            color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+          }
+        ],
+        areaCreationMode: false,
+      })),
+
+      updateArea: (id, data) => set(state => ({
+        areas: state.areas.map(area => area.id === id ? { ...area, ...data } : area)
+      })),
+
+      deleteArea: (id) => set(state => ({
+        areas: state.areas.filter(area => area.id !== id),
+        nodes: state.nodes.map(node => node.areaId === id ? { ...node, areaId: null } : node),
+        pipes: state.pipes.map(pipe => pipe.areaId === id ? { ...pipe, areaId: null } : pipe),
+        selectedAreaId: state.selectedAreaId === id ? null : state.selectedAreaId,
+      })),
+
+      assignObjectToArea: (objectId, objectType, areaId) => set(state => {
+        if (objectType === 'node') {
+          return {
+            nodes: state.nodes.map(node => node.id === objectId ? { ...node, areaId } : node)
+          };
+        }
+        if (objectType === 'pipe') {
+          return {
+            pipes: state.pipes.map(pipe => pipe.id === objectId ? { ...pipe, areaId } : pipe)
+          };
+        }
+        return state;
+      }),
+
+      // --- СЕЛЕКТОРЫ ОБЛАСТЕЙ ---
+      getAreaById: (id) => get().areas.find(area => area.id === id),
+
+      getObjectsInArea: (areaId) => {
+        const { nodes, pipes } = get();
+        return {
+          nodes: nodes.filter(node => node.areaId === areaId),
+          pipes: pipes.filter(pipe => pipe.areaId === areaId),
+        };
+      },
+
+      getUnassignedObjects: () => {
+        const { nodes, pipes } = get();
+        return {
+          nodes: nodes.filter(node => !node.areaId),
+          pipes: pipes.filter(pipe => !pipe.areaId),
+        };
+      },
+
     }),
     {
       name: 'thermal-network-storage',
@@ -241,14 +304,17 @@ const useStore = create(
       partialize: (state) => ({ 
           nodes: state.nodes, 
           pipes: state.pipes, 
+          areas: state.areas,
           isPanelCollapsed: state.isPanelCollapsed,
         }),
-      // Исключаем состояние рисования из сохранения
       onRehydrateStorage: () => (state, error) => {
         if (state) {
           state.isDrawing = false;
           state.drawingStartNodeId = null;
           state.drawingVertices = [];
+          state.areaCreationMode = false;
+          state.editingPipeId = null;
+          state.editingMode = null;
         }
       }
     }

@@ -5,17 +5,29 @@ import Map from './components/Map';
 import DataDisplay from './components/DataDisplay';
 import PropertiesPanel from './components/PropertiesPanel';
 import OperationsMenu from './components/OperationsMenu';
+import AreaLayer from './components/AreaLayer';
+import MapEvents from './components/MapEvents';
 
 function App() {
   const [drawingMode, setDrawingMode] = useState('none');
-  const clearProject = useStore((state) => state.clearProject);
-  const { isPanelCollapsed, togglePanel } = useStore();
+  const { 
+    clearProject, 
+    isPanelCollapsed, 
+    togglePanel, 
+    toggleAreaCreationMode, 
+    areaCreationMode,
+    selectedAreaId,
+    deleteArea,
+    updateArea,
+    getAreaById
+  } = useStore();
+
+  const selectedArea = selectedAreaId ? getAreaById(selectedAreaId) : null;
 
   useEffect(() => {
-    // Этот эффект заставляет карту обновиться после анимации сворачивания/разворачивания
     const timer = setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
-    }, 300); // 300ms - это время анимации в App.css
+    }, 300);
     return () => clearTimeout(timer);
   }, [isPanelCollapsed]);
 
@@ -29,6 +41,7 @@ function App() {
           case '1': setDrawingMode('point'); break;
           case '2': setDrawingMode('pipe'); break;
           case '3': setDrawingMode('none'); break;
+          case '4': toggleAreaCreationMode(); break; 
           default: break;
         }
       }
@@ -37,12 +50,24 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [toggleAreaCreationMode]);
 
   const handleClearProject = () => {
     if (window.confirm('Вы уверены, что хотите полностью очистить проект? Все данные будут удалены.')) {
       clearProject();
       alert('Проект был успешно очищен.');
+    }
+  };
+
+  const handleAreaNameChange = (e) => {
+    if (selectedArea) {
+      updateArea(selectedArea.id, { name: e.target.value });
+    }
+  };
+
+  const handleAreaDelete = () => {
+    if (selectedArea && window.confirm(`Удалить область "${selectedArea.name}"?`)) {
+      deleteArea(selectedArea.id);
     }
   };
 
@@ -76,6 +101,13 @@ function App() {
             〰️<span className="control-text">{!isPanelCollapsed && ' Добавить трубу'}</span>
           </button>
           <button 
+            onClick={toggleAreaCreationMode}
+            className={areaCreationMode ? 'active' : ''}
+            title="Добавить область (Alt+4)"
+          >
+            🔲<span className="control-text">{!isPanelCollapsed && ' Добавить область'}</span>
+          </button>
+          <button 
             onClick={() => setDrawingMode('none')}
             className={drawingMode === 'none' ? 'active' : ''}
             title="Выбрать объект (Alt+3)"
@@ -88,13 +120,29 @@ function App() {
           <>
             <hr className="sidebar-divider" />
             <OperationsMenu onClearProject={handleClearProject} />
-            <PropertiesPanel />
+            {selectedArea ? (
+              <div className="properties-section">
+                <h3>Свойства области</h3>
+                <label>Название:</label>
+                <input 
+                  type="text" 
+                  value={selectedArea.name} 
+                  onChange={handleAreaNameChange} 
+                />
+                <button onClick={handleAreaDelete} className="delete-button">Удалить область</button>
+              </div>
+            ) : (
+              <PropertiesPanel />
+            )}
             <DataDisplay />
           </>
         )}
       </div>
       <div className="map-container">
-        <Map drawingMode={drawingMode} setDrawingMode={setDrawingMode} />
+        <Map drawingMode={drawingMode} setDrawingMode={setDrawingMode}>
+            <AreaLayer />
+            <MapEvents />
+        </Map>
       </div>
     </div>
   );

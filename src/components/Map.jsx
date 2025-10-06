@@ -49,7 +49,7 @@ const getMarkerIcon = (nodeType, isMoving) => {
   });
 };
 
-const Map = ({ drawingMode, setDrawingMode }) => {
+const Map = ({ drawingMode, setDrawingMode, children }) => { // Добавлен children
   const { 
     nodes, 
     pipes, 
@@ -59,7 +59,6 @@ const Map = ({ drawingMode, setDrawingMode }) => {
     selectedVertexIndex,
     setSelectedVertexIndex,
     updatePipeEndpoint, 
-    // --- Получаем новые actions из store ---
     isDrawing,
     startDrawing,
     finishDrawing
@@ -83,7 +82,6 @@ const Map = ({ drawingMode, setDrawingMode }) => {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
 
-      {/* Передаем setDrawingMode для сброса режима после завершения */}
       <DrawingHandler drawingMode={drawingMode} setDrawingMode={setDrawingMode} />
       
       {pipes.map(pipe => {
@@ -115,21 +113,18 @@ const Map = ({ drawingMode, setDrawingMode }) => {
           icon={getMarkerIcon(node.nodeType, node.id === movingNodeId)}
           eventHandlers={{
             click: (e) => {
-              L.DomEvent.stopPropagation(e); // Всегда останавливаем всплытие
+              L.DomEvent.stopPropagation(e);
 
-              // --- НОВАЯ ЛОГИКА РИСОВАНИЯ ---
               if (drawingMode === 'pipe') {
                 if (!isDrawing) {
-                  startDrawing(node); // Начинаем рисовать с этого узла
+                  startDrawing(node); 
                 } else {
-                  finishDrawing(node); // Заканчиваем рисовать на этом узле
-                  setDrawingMode('none'); // Сбрасываем режим в UI
+                  finishDrawing(node); 
+                  setDrawingMode('none'); 
                 }
                 return;
               }
-              // --------------------------------
 
-              // Логика привязки конечной точки трубы к узлу
               if (isMovingEndpoint) {
                 const disallowedNodeId = selectedVertexIndex === 0 ? editingPipe.endNodeId : editingPipe.startNodeId;
                 if (node.id === disallowedNodeId) return;
@@ -139,17 +134,16 @@ const Map = ({ drawingMode, setDrawingMode }) => {
                 return; 
               }
 
-              // Блокируем выбор узла, если активен другой режим
               if (movingNodeId || editingPipeId) {
                 return;
               }
 
-              // Действие по умолчанию: выбрать узел
               setSelectedObject({ id: node.id, type: 'node' });
             },
           }}
         />
       ))}
+      {children} 
     </MapContainer>
   );
 };

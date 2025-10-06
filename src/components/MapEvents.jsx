@@ -1,0 +1,40 @@
+import { useMapEvents } from 'react-leaflet';
+import useStore from '../useStore';
+import { useEffect, useState } from 'react';
+
+const MapEvents = () => {
+  const { areaCreationMode, addArea, toggleAreaCreationMode } = useStore();
+  const [firstCorner, setFirstCorner] = useState(null);
+
+  const map = useMapEvents({
+    click(e) {
+      if (areaCreationMode) {
+        if (!firstCorner) {
+          setFirstCorner(e.latlng);
+        } else {
+          const secondCorner = e.latlng;
+          const bounds = [[firstCorner.lat, firstCorner.lng], [secondCorner.lat, secondCorner.lng]];
+          addArea(bounds);
+          setFirstCorner(null);
+          toggleAreaCreationMode(); 
+        }
+      }
+    },
+  });
+
+  useEffect(() => {
+    if (areaCreationMode) {
+      map.getContainer().style.cursor = 'crosshair';
+    } else {
+      map.getContainer().style.cursor = '';
+    }
+    // Очистка при размонтировании
+    return () => {
+        map.getContainer().style.cursor = '';
+    }
+  }, [areaCreationMode, map]);
+
+  return null;
+};
+
+export default MapEvents;
