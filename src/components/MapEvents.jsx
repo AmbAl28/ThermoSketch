@@ -2,7 +2,7 @@ import { useMapEvents } from 'react-leaflet';
 import useStore from '../useStore';
 import { useEffect, useState } from 'react';
 
-const MapEvents = () => {
+const MapEvents = ({ setDrawingMode }) => {
   const { areaCreationMode, addArea, toggleAreaCreationMode } = useStore();
   const [firstCorner, setFirstCorner] = useState(null);
 
@@ -16,7 +16,7 @@ const MapEvents = () => {
           const bounds = [[firstCorner.lat, firstCorner.lng], [secondCorner.lat, secondCorner.lng]];
           addArea(bounds);
           setFirstCorner(null);
-          toggleAreaCreationMode(); 
+          setDrawingMode('none');
         }
       }
     },
@@ -28,7 +28,7 @@ const MapEvents = () => {
     } else {
       map.getContainer().style.cursor = '';
     }
-    // Очистка при размонтировании
+    
     return () => {
         map.getContainer().style.cursor = '';
     }

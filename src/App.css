@@ -152,7 +152,7 @@
 }
 
 .properties-panel p {
-  font-size: 0.8em;
+  font-size: 0.9em;
   color: #666;
   word-wrap: break-word;
 }
@@ -165,7 +165,8 @@
   color: #555;
 }
 
-.properties-panel form input,
+.properties-panel form input[type="text"],
+.properties-panel form input[type="number"],
 .properties-panel form select,
 .properties-panel form textarea {
   width: 100%;
@@ -177,10 +178,19 @@
   border-radius: 3px;
 }
 
+.properties-panel form input[type="color"] {
+  width: 100%;
+  height: 40px;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+}
+
 .properties-panel form textarea {
   resize: vertical; 
   min-height: 60px; 
 }
+
 
 /* --- Специальные стили для кнопок внутри панели свойств --- */
 .properties-panel .controls .delete-btn {
@@ -249,6 +259,29 @@
   border: 1px solid #ddd;
   border-top: none;
   border-radius: 0 0 5px 5px;
+  font-size: 0.9em;
+}
+
+.data-summary-content h5, .data-summary-content h6 {
+  margin-top: 10px;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.data-summary-content ul {
+  list-style-type: none;
+  padding-left: 15px;
+  margin: 0;
+}
+
+.data-summary-content li {
+  padding: 2px 0;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.data-summary-content li:hover {
+  color: #007bff;
 }
 
 /* --- Стили для иконок на карте --- */

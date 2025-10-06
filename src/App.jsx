@@ -14,12 +14,12 @@ function App() {
     clearProject, 
     isPanelCollapsed, 
     togglePanel, 
-    toggleAreaCreationMode, 
     areaCreationMode,
     selectedAreaId,
     deleteArea,
     updateArea,
-    getAreaById
+    getAreaById,
+    toggleAreaCreationMode,
   } = useStore();
 
   const selectedArea = selectedAreaId ? getAreaById(selectedAreaId) : null;
@@ -31,6 +31,16 @@ function App() {
     return () => clearTimeout(timer);
   }, [isPanelCollapsed]);
 
+  const handleToggleAreaCreation = () => {
+    if (!areaCreationMode) {
+        setDrawingMode('area');
+        toggleAreaCreationMode(); 
+    } else {
+        setDrawingMode('none');
+        toggleAreaCreationMode();
+    }
+  }
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) {
@@ -41,7 +51,7 @@ function App() {
           case '1': setDrawingMode('point'); break;
           case '2': setDrawingMode('pipe'); break;
           case '3': setDrawingMode('none'); break;
-          case '4': toggleAreaCreationMode(); break; 
+          case '4': handleToggleAreaCreation(); break; 
           default: break;
         }
       }
@@ -50,7 +60,8 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [toggleAreaCreationMode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [areaCreationMode]);
 
   const handleClearProject = () => {
     if (window.confirm('Вы уверены, что хотите полностью очистить проект? Все данные будут удалены.')) {
@@ -101,8 +112,8 @@ function App() {
             〰️<span className="control-text">{!isPanelCollapsed && ' Добавить трубу'}</span>
           </button>
           <button 
-            onClick={toggleAreaCreationMode}
-            className={areaCreationMode ? 'active' : ''}
+            onClick={handleToggleAreaCreation}
+            className={drawingMode === 'area' ? 'active' : ''}
             title="Добавить область (Alt+4)"
           >
             🔲<span className="control-text">{!isPanelCollapsed && ' Добавить область'}</span>
@@ -141,7 +152,7 @@ function App() {
       <div className="map-container">
         <Map drawingMode={drawingMode} setDrawingMode={setDrawingMode}>
             <AreaLayer />
-            <MapEvents />
+            <MapEvents setDrawingMode={setDrawingMode} />
         </Map>
       </div>
     </div>

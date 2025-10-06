@@ -23,6 +23,43 @@ function calculatePipeLength(vertices) {
   return Math.round(totalLength);
 }
 
+function isPointInBounds(point, bounds) {
+    const [lat, lng] = point;
+    const [[swLat, swLng], [neLat, neLng]] = bounds;
+    const latCheck = lat >= Math.min(swLat, neLat) && lat <= Math.max(swLat, neLat);
+    const lngCheck = lng >= Math.min(swLng, neLng) && lng <= Math.max(swLng, neLng);
+    return latCheck && lngCheck;
+}
+
+function getPipeAreaId(vertices, areas) {
+    const areaCounts = {};
+    vertices.forEach(vertex => {
+        for (const area of areas) {
+            if (isPointInBounds(vertex, area.bounds)) {
+                areaCounts[area.id] = (areaCounts[area.id] || 0) + 1;
+                break;
+            }
+        }
+    });
+
+    let assignedAreaId = null;
+    let maxCount = 0;
+    for (const areaId in areaCounts) {
+        if (areaCounts[areaId] > maxCount) {
+            maxCount = areaCounts[areaId];
+            assignedAreaId = areaId;
+        }
+    }
+    
+    const counts = Object.values(areaCounts);
+    const sortedCounts = counts.sort((a, b) => b - a);
+    if (sortedCounts.length > 1 && sortedCounts[0] === sortedCounts[1]) {
+        return null; 
+    }
+    return assignedAreaId;
+}
+
+
 const safeJsonStorage = {
   getItem: (name) => {
     const str = localStorage.getItem(name);
@@ -46,10 +83,10 @@ const useStore = create(
     (set, get) => ({
       nodes: [],
       pipes: [],
-      areas: [], // Массив для хранения областей
+      areas: [],
       selectedObject: null,
-      selectedAreaId: null, // ID выбранной области
-      areaCreationMode: false, // Режим создания области
+      selectedAreaId: null, 
+      areaCreationMode: false,
       isPanelCollapsed: false,
       movingNodeId: null,
       editingPipeId: null,
@@ -61,28 +98,44 @@ const useStore = create(
 
       setNodes: (nodes) => set({ nodes }),
       setPipes: (pipes) => set({ pipes }),
+      setAreas: (areas) => set({ areas }),
       setMovingNodeId: (nodeId) => set({ movingNodeId: nodeId }),
       setSelectedVertexIndex: (index) => set({ selectedVertexIndex: index }),
 
-      addNode: (node) => set((state) => ({ 
-        nodes: [
-          ...state.nodes, 
-          { 
-            ...node, 
-            name: `Узел ${state.nodes.length + 1}`,
-            type: 'node', 
-            nodeType: 'chamber',
-            elevation: 0,
-            contractNumber: '',
-            note: '',
-            heatLoad: '', 
-            staticPressure: '',
-            supplyTemperature: '',
-            returnTemperature: '',
-            areaId: null, // Привязка к области
+      addNode: (node) => {
+        const { areas } = get();
+        let assignedAreaId = null;
+        for (const area of areas) {
+          if (isPointInBounds([node.lat, node.lng], area.bounds)) {
+            assignedAreaId = area.id;
+            break;
           }
-        ]
-      })),
+        }
+
+        if (!assignedAreaId) {
+            alert("Предупреждение: Узел создается вне границ определенных областей. Он будет отнесен к категории \'Другое\'.");
+        }
+
+        set((state) => ({ 
+          nodes: [
+            ...state.nodes, 
+            { 
+              ...node, 
+              name: `Узел ${state.nodes.length + 1}`,
+              type: 'node', 
+              nodeType: 'chamber',
+              elevation: 0,
+              contractNumber: '',
+              note: '',
+              heatLoad: '', 
+              staticPressure: '',
+              supplyTemperature: '',
+              returnTemperature: '',
+              areaId: assignedAreaId, 
+            }
+          ]
+        }));
+      },
       
       startDrawing: (node) => {
         set({ 
@@ -98,7 +151,7 @@ const useStore = create(
       },
 
       finishDrawing: (endNode) => {
-        const { isDrawing, drawingStartNodeId, drawingVertices } = get();
+        const { isDrawing, drawingStartNodeId, drawingVertices, areas } = get();
         if (!isDrawing || !drawingStartNodeId || !endNode) {
           get().resetDrawing();
           return;
@@ -115,6 +168,12 @@ const useStore = create(
           get().resetDrawing();
           return;
         }
+        
+        const assignedAreaId = getPipeAreaId(finalVertices, areas);
+
+        if (!assignedAreaId) {
+            alert("Предупреждение: Труба создается вне границ определенных областей или пересекает несколько областей без явного большинства вершин. Она будет отнесена к категории \'Другое\'.");
+        }
 
         const newPipe = {
             startNodeId: drawingStartNodeId,
@@ -128,7 +187,7 @@ const useStore = create(
             actualLength: '', 
             insulationMaterial: 'ППУ',
             insulationWear: 0,
-            areaId: null, // Привязка к области
+            areaId: assignedAreaId,
         };
 
         set(state => ({ pipes: [...state.pipes, newPipe] }));
@@ -155,36 +214,49 @@ const useStore = create(
         nodes: state.nodes.map(node => node.id === id ? { ...node, ...data } : node)
       })),
 
-      updateNodePosition: (nodeId, newPosition) => set((state) => {
-        const newNodes = state.nodes.map(node => 
-          node.id === nodeId 
-            ? { ...node, lat: newPosition.lat, lng: newPosition.lng } 
-            : node
-        );
-        const newPipes = state.pipes.map(pipe => {
-          let updated = false;
-          const newVertices = [...pipe.vertices];
-          if (pipe.startNodeId === nodeId) {
-            newVertices[0] = [newPosition.lat, newPosition.lng];
-            updated = true;
+      updateNodePosition: (nodeId, newPosition) => {
+          const { areas } = get();
+          let assignedAreaId = null;
+          for (const area of areas) {
+              if (isPointInBounds([newPosition.lat, newPosition.lng], area.bounds)) {
+                  assignedAreaId = area.id;
+                  break;
+              }
           }
-          if (pipe.endNodeId === nodeId) {
-            newVertices[newVertices.length - 1] = [newPosition.lat, newPosition.lng];
-            updated = true;
-          }
-          if (updated) {
-            return { ...pipe, vertices: newVertices, length: calculatePipeLength(newVertices) };
-          }
-          return pipe;
-        });
-        return { nodes: newNodes, pipes: newPipes };
-      }),
+
+          set((state) => {
+            const newNodes = state.nodes.map(node => 
+              node.id === nodeId 
+                ? { ...node, lat: newPosition.lat, lng: newPosition.lng, areaId: assignedAreaId } 
+                : node
+            );
+            const newPipes = state.pipes.map(pipe => {
+              let updated = false;
+              const newVertices = [...pipe.vertices];
+              if (pipe.startNodeId === nodeId) {
+                newVertices[0] = [newPosition.lat, newPosition.lng];
+                updated = true;
+              }
+              if (pipe.endNodeId === nodeId) {
+                newVertices[newVertices.length - 1] = [newPosition.lat, newPosition.lng];
+                updated = true;
+              }
+              if (updated) {
+                const newAreaId = getPipeAreaId(newVertices, state.areas);
+                return { ...pipe, vertices: newVertices, length: calculatePipeLength(newVertices), areaId: newAreaId };
+              }
+              return pipe;
+            });
+            return { nodes: newNodes, pipes: newPipes };
+          });
+      },
 
       updatePipe: (id, data) => set((state) => ({ 
         pipes: state.pipes.map(pipe => pipe.id === id ? { ...pipe, ...data } : pipe)
       })),
 
-      setSelectedObject: (object) => set({ selectedObject: object }),
+      setSelectedObject: (object) => set({ selectedObject: object, selectedAreaId: null }),
+      setSelectedAreaId: (id) => set({ selectedAreaId: id, selectedObject: null }),
 
       deleteObject: (object) => set((state) => {
         if (object.type === 'node') {
@@ -211,7 +283,7 @@ const useStore = create(
       updatePipeVertices: (pipeId, vertices) => set((state) => ({
         pipes: state.pipes.map(pipe =>
           pipe.id === pipeId
-            ? { ...pipe, vertices, length: calculatePipeLength(vertices) }
+            ? { ...pipe, vertices, length: calculatePipeLength(vertices), areaId: getPipeAreaId(vertices, state.areas) }
             : pipe
         ),
       })),
@@ -229,29 +301,46 @@ const useStore = create(
                     newVertices[newVertices.length - 1] = newPosition;
                     newEndNodeId = newNodeId;
                 }
-                return { ...pipe, vertices: newVertices, startNodeId: newStartNodeId, endNodeId: newEndNodeId, length: calculatePipeLength(newVertices) };
+                const newAreaId = getPipeAreaId(newVertices, state.areas);
+                return { ...pipe, vertices: newVertices, startNodeId: newStartNodeId, endNodeId: newEndNodeId, length: calculatePipeLength(newVertices), areaId: newAreaId };
             }
             return pipe;
         });
         return { pipes: newPipes };
       }),
 
-      // --- УПРАВЛЕНИЕ ОБЛАСТЯМИ ---
       toggleAreaCreationMode: () => set(state => ({ areaCreationMode: !state.areaCreationMode, selectedObject: null })),
-      setSelectedAreaId: (id) => set({ selectedAreaId: id, selectedObject: null }),
-
-      addArea: (bounds, name) => set(state => ({
-        areas: [
-          ...state.areas,
-          {
+      
+      addArea: (bounds, name) => {
+        const newArea = {
             id: crypto.randomUUID(),
-            name: name || `Область ${state.areas.length + 1}`,
+            name: name || `Область ${get().areas.length + 1}`,
             bounds: bounds,
-            color: `hsl(${Math.random() * 360}, 70%, 50%)`,
-          }
-        ],
-        areaCreationMode: false,
-      })),
+            color: 'green',
+        };
+
+        const updatedAreas = [...get().areas, newArea];
+
+        const updatedNodes = get().nodes.map(node => {
+            if (isPointInBounds([node.lat, node.lng], newArea.bounds)) {
+                return { ...node, areaId: newArea.id };
+            }
+            return node;
+        });
+
+        const updatedPipes = get().pipes.map(pipe => {
+            const newAreaId = getPipeAreaId(pipe.vertices, updatedAreas);
+            return { ...pipe, areaId: newAreaId };
+        });
+
+        set({
+            areas: updatedAreas,
+            nodes: updatedNodes,
+            pipes: updatedPipes,
+            areaCreationMode: false,
+            selectedAreaId: null,
+        });
+      },
 
       updateArea: (id, data) => set(state => ({
         areas: state.areas.map(area => area.id === id ? { ...area, ...data } : area)
@@ -278,7 +367,6 @@ const useStore = create(
         return state;
       }),
 
-      // --- СЕЛЕКТОРЫ ОБЛАСТЕЙ ---
       getAreaById: (id) => get().areas.find(area => area.id === id),
 
       getObjectsInArea: (areaId) => {

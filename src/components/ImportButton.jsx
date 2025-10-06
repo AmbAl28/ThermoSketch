@@ -1,7 +1,6 @@
 import React, { useRef } from 'react';
 import useStore from '../useStore';
 
-// Функции гидратации остаются без изменений
 const hydrateNode = (node) => {
   const defaultNode = { name: 'Узел', type: 'node', nodeType: 'chamber', elevation: 0, contractNumber: '', note: '', heatLoad: '', staticPressure: '', supplyTemperature: '', returnTemperature: '' };
   return { ...defaultNode, ...node };
@@ -13,8 +12,8 @@ const hydratePipe = (pipe) => {
 };
 
 const ImportButton = () => {
-  const { setNodes, setPipes, clearProject } = useStore();
-  const fileInputRef = useRef(null); // Создаем ссылку на input
+  const { setNodes, setPipes, clearProject, setAreas } = useStore();
+  const fileInputRef = useRef(null);
 
   const handleFileChange = (event) => {
     const file = event.target.files[0];
@@ -23,8 +22,39 @@ const ImportButton = () => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const { nodes, pipes } = JSON.parse(e.target.result);
-        if (!Array.isArray(nodes) || !Array.isArray(pipes)) throw new Error("Неверный формат данных");
+        const data = JSON.parse(e.target.result);
+        let nodes = [], pipes = [], areas = [];
+
+        if (data.schemaVersion === "2.0") {
+          // New format
+          areas = data.areas || [];
+          const areaIds = new Set(areas.map(a => a.id));
+
+          Object.values(data.objects).forEach(areaObjects => {
+            nodes.push(...areaObjects.nodes);
+            pipes.push(...areaObjects.pipes);
+          });
+          nodes.push(...data.unassigned.nodes);
+          pipes.push(...data.unassigned.pipes);
+
+          // Validate areaId
+          nodes.forEach(node => {
+            if (node.areaId && !areaIds.has(node.areaId)) {
+              node.areaId = null; // or handle as an error
+            }
+          });
+          pipes.forEach(pipe => {
+            if (pipe.areaId && !areaIds.has(pipe.areaId)) {
+              pipe.areaId = null; // or handle as an error
+            }
+          });
+
+        } else {
+          // Old format
+          if (!Array.isArray(data.nodes) || !Array.isArray(data.pipes)) throw new Error("Неверный формат данных");
+          nodes = data.nodes;
+          pipes = data.pipes;
+        }
 
         const hydratedNodes = nodes.map(hydrateNode);
         const hydratedPipes = pipes.map(hydratePipe);
@@ -37,6 +67,7 @@ const ImportButton = () => {
         }
 
         clearProject();
+        setAreas(areas);
         setNodes(hydratedNodes);
         setPipes(hydratedPipes);
         alert('Проект успешно импортирован!');
@@ -51,7 +82,7 @@ const ImportButton = () => {
   };
 
   const handleClick = () => {
-    fileInputRef.current.click(); // Симулируем клик по скрытому input
+    fileInputRef.current.click();
   };
 
   return (

@@ -14,7 +14,12 @@ const PropertiesPanel = () => {
     editingMode,
     startPipeEditing,
     setEditingMode,
-    finishPipeEditing
+    finishPipeEditing,
+    getAreaById, 
+    selectedAreaId,
+    setSelectedAreaId,
+    updateArea,
+    deleteArea,
   } = useStore();
 
   const handleMoveClick = () => {
@@ -29,11 +34,43 @@ const PropertiesPanel = () => {
     }
   };
 
-  if (!selectedObject) {
+  const handleAreaChange = (e) => {
+    const { name, value } = e.target;
+    updateArea(selectedAreaId, { [name]: value });
+  };
+
+  const handleDeleteArea = () => {
+    if (window.confirm(`Вы уверены, что хотите удалить эту область? Все объекты в ней станут непривязанными.`)) {
+      deleteArea(selectedAreaId);
+    }
+  }
+
+  if (!selectedObject && !selectedAreaId) {
     return (
       <div className="properties-panel">
-        <h4>Свойства объекта</h4>
-        <p>Объект не выбран. Кликните на узел или трубу на карте, чтобы просмотреть и отредактировать их свойства.</p>
+        <h4>Свойства</h4>
+        <p>Объект или область не выбраны. Кликните на объект на карте или на название области в сводке, чтобы просмотреть и отредактировать их свойства.</p>
+      </div>
+    );
+  }
+
+  if (selectedAreaId && !selectedObject) {
+    const area = getAreaById(selectedAreaId);
+    if (!area) return null;
+
+    return (
+      <div className="properties-panel">
+        <h4>Редактирование области</h4>
+        <form>
+            <label htmlFor="name">Название</label>
+            <input type="text" id="name" name="name" value={area.name} onChange={handleAreaChange} />
+            <label htmlFor="color">Цвет</label>
+            <input type="color" id="color" name="color" value={area.color} onChange={handleAreaChange} />
+        </form>
+        <div className="controls">
+            <button className="delete-btn" onClick={handleDeleteArea}>Удалить область</button>
+            <button className="close-btn" onClick={() => setSelectedAreaId(null)}>Закрыть</button>
+        </div>
       </div>
     );
   }
@@ -51,6 +88,8 @@ const PropertiesPanel = () => {
         </div>
       );
   }
+
+  const area = data.areaId ? getAreaById(data.areaId) : null;
 
   const handleClose = () => {
     finishPipeEditing();
@@ -157,6 +196,7 @@ const PropertiesPanel = () => {
     <div className="properties-panel">
       <h4>{isNode ? 'Редактирование узла' : (isEditingPipe ? 'Редактирование конфигурации' : 'Редактирование трубы')}</h4>
       <p>ID: {data.id}</p>
+      <p>Область: {area ? area.name : 'Другое'}</p>
       
       {isEditingPipe ? (
         <div className="controls">
@@ -182,7 +222,7 @@ const PropertiesPanel = () => {
               <button className="delete-btn" onClick={handleDelete}>Удалить трубу</button>
             </>
           )}
-           <button className="close-btn" onClick={handleClose}>Закрыть редактирование</button>
+           <button className="close-btn" onClick={handleClose}>Закрыть</button>
         </div>
       )}
 

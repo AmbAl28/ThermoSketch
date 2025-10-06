@@ -12,10 +12,10 @@ const AreaLayer = () => {
           key={area.id}
           bounds={area.bounds}
           pathOptions={{
-            color: selectedAreaId === area.id ? 'yellow' : 'green',
-            dashArray: '5, 5',
+            color: area.color || 'green',
+            dashArray: '10, 10',
             fill: false,
-            weight: 2,
+            weight: 5,
           }}
           eventHandlers={{
             click: () => {
