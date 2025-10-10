@@ -5,6 +5,7 @@ import Map from './components/Map';
 import DataDisplay from './components/DataDisplay';
 import PropertiesPanel from './components/PropertiesPanel';
 import OperationsMenu from './components/OperationsMenu';
+import ViewOptionsPanel from './components/ViewOptionsPanel'; // <-- Импорт нового компонента
 import AreaLayer from './components/AreaLayer';
 import MapEvents from './components/MapEvents';
 
@@ -112,13 +113,18 @@ function App() {
         {!isPanelCollapsed && (
           <>
             <hr className="sidebar-divider" />
-            <OperationsMenu onClearProject={handleClearProject} />
+            {/* Меню операций было здесь, теперь оно перемещено */}
             <PropertiesPanel />
             <DataDisplay />
           </>
         )}
       </div>
       <div className="map-container">
+        {/* --- НОВЫЙ КОНТЕЙНЕР ДЛЯ ОВЕРЛЕЕВ --- */}
+        <div className="map-overlay-controls">
+          <OperationsMenu onClearProject={handleClearProject} />
+          <ViewOptionsPanel />
+        </div>
         <Map drawingMode={drawingMode} setDrawingMode={setDrawingMode}>
             <AreaLayer />
             <MapEvents setDrawingMode={setDrawingMode} />

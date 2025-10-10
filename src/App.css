@@ -7,6 +7,17 @@
 
 .map-container {
   flex-grow: 1;
+  position: relative; /* Добавлено для позиционирования оверлеев */
+}
+
+/* --- НОВЫЙ КОНТЕЙНЕР ДЛЯ ОВЕРЛЕЕВ --- */
+.map-overlay-controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1000; /* Убедимся, что он выше карты */
+  display: flex;
+  gap: 10px; /* Расстояние между кнопками */
 }
 
 /* --- Стили боковой панели --- */
@@ -22,8 +33,9 @@
   flex-direction: column;
   transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
   position: relative; 
-  z-index: 1000; 
+  z-index: 1001; /* Панель должна быть выше оверлеев */ 
   overflow-y: auto; 
+  box-shadow: 2px 0 5px rgba(0,0,0,0.1);
 }
 
 .sidebar.collapsed {
@@ -81,7 +93,7 @@
   flex-direction: column;
   gap: 10px;
   width: 100%;
-  margin-top: 20px; /* Добавлен отступ сверху */
+  margin-top: 20px;
 }
 
 .controls button {
@@ -148,7 +160,7 @@
 
 .properties-panel h4 {
   margin-top: 0;
-  margin-bottom: 20px; /* Увеличен отступ */
+  margin-bottom: 20px; 
   color: #333;
 }
 
@@ -161,10 +173,10 @@
 .properties-panel form label {
   display: block;
   font-size: 0.9em;
-  margin-top: 15px; /* Увеличен отступ */
-  margin-bottom: 5px; /* Увеличен отступ */
+  margin-top: 15px; 
+  margin-bottom: 5px; 
   color: #555;
-  font-weight: 600; /* Сделал пожирнее */
+  font-weight: 600; 
 }
 
 .properties-panel form input[type="text"],
@@ -172,12 +184,12 @@
 .properties-panel form select,
 .properties-panel form textarea {
   width: 100%;
-  padding: 10px; /* Увеличены отступы */
+  padding: 10px; 
   box-sizing: border-box;
   border: 1px solid #ccc;
   background-color: #fff;
   color: #333;
-  border-radius: 5px; /* Увеличен радиус */
+  border-radius: 5px; 
 }
 
 .properties-panel form textarea {
@@ -252,14 +264,14 @@
   border: 1px solid #ddd;
   border-top: none;
   border-radius: 0 0 5px 5px;
-  font-size: 0.9em; /* Единый размер шрифта */
-  color: #333; /* Единый цвет шрифта */
+  font-size: 0.9em; 
+  color: #333; 
 }
 
 .data-summary-content h5 {
   margin-top: 10px;
   margin-bottom: 8px;
-  font-weight: bold; /* Жирные заголовки */
+  font-weight: bold; 
   color: #333;
 }
 
@@ -268,7 +280,7 @@
   align-items: center;
   margin-top: 8px;
   margin-bottom: 5px;
-  font-weight: normal; /* Обычный вес шрифта */
+  font-weight: normal; 
   color: #333;
   cursor: pointer;
 }
@@ -282,18 +294,18 @@
   height: 12px;
   border-radius: 3px;
   margin-right: 8px;
-  flex-shrink: 0; /* Предотвращает сжатие маркера */
+  flex-shrink: 0; 
   border: 1px solid #ccc;
 }
 
 .data-summary-content ul {
   list-style-type: none;
-  padding-left: 20px; /* Небольшой отступ для вложенности */
+  padding-left: 20px; 
   margin: 0;
 }
 
 .data-summary-content li {
-  padding: 3px 0; /* Небольшой отступ */
+  padding: 3px 0; 
   cursor: pointer;
   transition: color 0.2s;
   white-space: nowrap;

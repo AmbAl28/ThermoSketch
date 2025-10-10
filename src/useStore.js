@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
-// --- Вспомогательные функции ---
+// --- Вспомогательные функции (без изменений) ---
 function haversineDistance(coords1, coords2) {
   const toRad = (x) => (x * Math.PI) / 180;
   const R = 6371e3;
@@ -59,7 +59,6 @@ function getPipeAreaId(vertices, areas) {
     return assignedAreaId;
 }
 
-
 const safeJsonStorage = {
   getItem: (name) => {
     const str = localStorage.getItem(name);
@@ -81,6 +80,7 @@ const safeJsonStorage = {
 const useStore = create(
   persist(
     (set, get) => ({
+      // --- Существующее состояние ---
       nodes: [],
       pipes: [],
       areas: [],
@@ -95,12 +95,27 @@ const useStore = create(
       isDrawing: false,
       drawingStartNodeId: null,
       drawingVertices: [],
+      
+      // --- НОВОЕ: Настройки вида ---
+      viewOptions: {
+        showAnnotations: true,
+        showNodeAnnotations: true,
+        showPipeAnnotations: true,
+        hiddenAnnotationNodeTypes: [], // e.g. ['valve', 'chamber']
+        forceLargeNodes: false,
+      },
 
+      // --- Существующие actions ---
       setNodes: (nodes) => set({ nodes }),
       setPipes: (pipes) => set({ pipes }),
       setAreas: (areas) => set({ areas }),
       setMovingNodeId: (nodeId) => set({ movingNodeId: nodeId }),
       setSelectedVertexIndex: (index) => set({ selectedVertexIndex: index }),
+      
+      // --- НОВОЕ: Action для обновления настроек вида ---
+      setViewOptions: (options) => set(state => ({
+        viewOptions: { ...state.viewOptions, ...options }
+      })),
 
       addNode: (node) => {
         const { areas } = get();
@@ -389,14 +404,17 @@ const useStore = create(
     {
       name: 'thermal-network-storage',
       storage: createJSONStorage(() => safeJsonStorage),
+      // Добавляем viewOptions в сохраняемое состояние
       partialize: (state) => ({ 
           nodes: state.nodes, 
           pipes: state.pipes, 
           areas: state.areas,
           isPanelCollapsed: state.isPanelCollapsed,
+          viewOptions: state.viewOptions, // <-- СОХРАНЯЕМ НАСТРОЙКИ
         }),
       onRehydrateStorage: () => (state, error) => {
         if (state) {
+          // Сбрасываем состояния, которые не должны сохраняться
           state.isDrawing = false;
           state.drawingStartNodeId = null;
           state.drawingVertices = [];

@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import useStore from '../useStore';
 import DrawingHandler from './DrawingHandler';
-import AnnotationLayer from './AnnotationLayer'; // Импортируем новый компонент
+import AnnotationLayer from './AnnotationLayer';
 
 const nodeIconConfig = {
   source: { emoji: '🏭', color: '#4CAF50' },
@@ -23,9 +23,11 @@ const NODE_TYPE_TRANSLATIONS = {
     diameter_change: 'Смена диаметра'
 };
 
-const getMarkerIcon = (nodeType, isMoving, isSelected, isHovered, isEditing) => {
+// --- Функция getMarkerIcon изменена ---
+const getMarkerIcon = (nodeType, isMoving, isSelected, isHovered, isEditing, forceLarge) => {
   const config = nodeIconConfig[nodeType] || nodeIconConfig.default;
-  const isEnlarged = isMoving || isSelected || isHovered || isEditing;
+  // Теперь isEnlarged зависит и от forceLarge
+  const isEnlarged = forceLarge || isMoving || isSelected || isHovered || isEditing;
   const size = isEnlarged ? 26 : 10;
   
   const emojiStyle = `
@@ -88,7 +90,8 @@ const Map = ({ drawingMode, setDrawingMode, children }) => {
   const { 
     nodes, pipes, selectedObject, setSelectedObject, movingNodeId,
     editingPipeId, selectedVertexIndex, setSelectedVertexIndex,
-    updatePipeEndpoint, isDrawing, startDrawing, finishDrawing
+    updatePipeEndpoint, isDrawing, startDrawing, finishDrawing,
+    viewOptions // <-- Получаем viewOptions из стора
   } = useStore(state => state);
 
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
@@ -115,7 +118,8 @@ const Map = ({ drawingMode, setDrawingMode, children }) => {
           <Marker 
             key={node.id} 
             position={[node.lat, node.lng]} 
-            icon={getMarkerIcon(node.nodeType, node.id === movingNodeId, isSelected, isHovered, isEditing)}
+            // Передаем forceLargeNodes в функцию
+            icon={getMarkerIcon(node.nodeType, node.id === movingNodeId, isSelected, isHovered, isEditing, viewOptions.forceLargeNodes)}
             eventHandlers={{ click: (e) => {
               L.DomEvent.stopPropagation(e);
               if (drawingMode === 'pipe') {
@@ -135,8 +139,6 @@ const Map = ({ drawingMode, setDrawingMode, children }) => {
               }
             }}}
           >
-            {/* Tooltip теперь будет использоваться только для интерактивного отображения при наведении. 
-                А постоянные сноски будут в AnnotationLayer. */}
             <Tooltip direction="top" offset={[0, -13]}>
                 <b>{node.name || 'Без имени'}</b>
                 <br />
@@ -146,7 +148,6 @@ const Map = ({ drawingMode, setDrawingMode, children }) => {
         )
       })}
       
-      {/* Добавляем слой со сносками */}
       <AnnotationLayer />
 
       {children} 

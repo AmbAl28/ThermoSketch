@@ -33,7 +33,6 @@ const createAnnotationIcon = (content, fontSize, positionClass) => {
   });
 };
 
-// Функция для проверки пересечения двух прямоугольников
 const doRectsOverlap = (rect1, rect2) => {
   return !(rect1.right < rect2.left || 
            rect1.left > rect2.right || 
@@ -41,7 +40,6 @@ const doRectsOverlap = (rect1, rect2) => {
            rect1.top > rect2.bottom);
 };
 
-// Определяем возможные позиции для сносок
 const ANCHOR_POSITIONS = {
   'top-right': { x: 15, y: -10 },
   'bottom-right': { x: 15, y: 10 },
@@ -51,7 +49,7 @@ const ANCHOR_POSITIONS = {
 const POSITION_CLASSES = Object.keys(ANCHOR_POSITIONS);
 
 const AnnotationLayer = () => {
-  const { nodes, pipes } = useStore();
+  const { nodes, pipes, viewOptions } = useStore(); // <-- Получаем viewOptions
   const map = useMap();
 
   const [mapState, setMapState] = useState({ zoom: map.getZoom(), center: map.getCenter() });
@@ -62,13 +60,15 @@ const AnnotationLayer = () => {
   });
 
   const annotations = useMemo(() => {
+    // <-- Глобальная проверка видимости сносок
+    if (!viewOptions.showAnnotations) return [];
+
     const currentFontSize = getFontSize(mapState.zoom);
     if (currentFontSize === 0) return [];
 
     const occupiedRects = [];
     const annotationData = [];
 
-    // 1. Добавляем узлы в занятые зоны
     nodes.forEach(node => {
         const point = map.latLngToContainerPoint([node.lat, node.lng]);
         occupiedRects.push({
@@ -77,31 +77,38 @@ const AnnotationLayer = () => {
         });
     });
     
-    // 2. Собираем все сноски (для узлов и труб)
-    const allAnnotationPoints = [
-      ...nodes.map(node => ({
-        id: `node-${node.id}`,
-        latlng: [node.lat, node.lng],
-        content: `<b>${node.name || 'Без имени'}</b><br>${NODE_TYPE_TRANSLATIONS[node.nodeType] || 'Неизвестный'}`,
-        size: { width: 120, height: 35 } // Примерный размер
-      })),
-      ...pipes.map(pipe => {
-        if (pipe.vertices.length < 2) return null;
-        const midIndex = Math.floor((pipe.vertices.length - 1) / 2);
-        const p1 = map.latLngToContainerPoint(pipe.vertices[midIndex]);
-        const p2 = map.latLngToContainerPoint(pipe.vertices[midIndex + 1]);
-        const midPointLatLng = map.containerPointToLatLng(p1.add(p2).divideBy(2));
+    // Фильтруем сноски узлов
+    const nodeAnnotations = viewOptions.showNodeAnnotations
+      ? nodes
+          .filter(node => !viewOptions.hiddenAnnotationNodeTypes.includes(node.nodeType))
+          .map(node => ({
+            id: `node-${node.id}`,
+            latlng: [node.lat, node.lng],
+            content: `<b>${node.name || 'Без имени'}</b><br>${NODE_TYPE_TRANSLATIONS[node.nodeType] || 'Неизвестный'}`,
+            size: { width: 120, height: 35 }
+          }))
+      : [];
 
-        return {
-          id: `pipe-${pipe.id}`,
-          latlng: midPointLatLng,
-          content: `${pipe.length ? pipe.length + ' м' : 'N/A'}<br>${pipe.diameter ? 'Ø' + pipe.diameter + ' мм' : 'N/A'}`,
-          size: { width: 100, height: 35 } // Примерный размер
-        }
-      }).filter(Boolean)
-    ];
+    // Фильтруем сноски труб
+    const pipeAnnotations = viewOptions.showPipeAnnotations
+      ? pipes.map(pipe => {
+          if (pipe.vertices.length < 2) return null;
+          const midIndex = Math.floor((pipe.vertices.length - 1) / 2);
+          const p1 = map.latLngToContainerPoint(pipe.vertices[midIndex]);
+          const p2 = map.latLngToContainerPoint(pipe.vertices[midIndex + 1]);
+          const midPointLatLng = map.containerPointToLatLng(p1.add(p2).divideBy(2));
 
-    // 3. Расставляем сноски, избегая коллизий
+          return {
+            id: `pipe-${pipe.id}`,
+            latlng: midPointLatLng,
+            content: `${pipe.length ? pipe.length + ' м' : 'N/A'}<br>${pipe.diameter ? 'Ø' + pipe.diameter + ' мм' : 'N/A'}`,
+            size: { width: 100, height: 35 }
+          }
+        }).filter(Boolean)
+      : [];
+
+    const allAnnotationPoints = [...nodeAnnotations, ...pipeAnnotations];
+
     allAnnotationPoints.forEach(anno => {
       const point = map.latLngToContainerPoint(anno.latlng);
       let bestPositionClass = '';
@@ -114,7 +121,6 @@ const AnnotationLayer = () => {
           right: point.x + anchor.x + anno.size.width * (posClass.includes('left') ? -1 : 1),
           bottom: point.y + anchor.y + anno.size.height * (posClass.includes('top') ? -1 : 1),
         };
-        // Нормализация, если ширина/высота отрицательные
         if (rect.left > rect.right) [rect.left, rect.right] = [rect.right, rect.left];
         if (rect.top > rect.bottom) [rect.top, rect.bottom] = [rect.bottom, rect.top];
 
@@ -127,7 +133,6 @@ const AnnotationLayer = () => {
         }
       }
 
-      // Если все позиции заняты, используем первую
       if (!bestPositionClass) {
         bestPositionClass = POSITION_CLASSES[0];
       }
@@ -137,7 +142,7 @@ const AnnotationLayer = () => {
 
     return annotationData;
 
-  }, [mapState, nodes, pipes, map]);
+  }, [mapState, nodes, pipes, map, viewOptions]); // <-- Добавляем viewOptions в зависимости
 
   return (
     <>

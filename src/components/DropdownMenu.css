@@ -1,0 +1,87 @@
+/* --- Общие стили для выпадающих меню --- */
+.dropdown-container {
+  position: relative;
+  display: inline-block;
+  margin-right: 10px; /* Отступ между кнопками */
+}
+
+.dropdown-button {
+  background-color: white;
+  color: #333;
+  padding: 8px 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.dropdown-button:hover {
+  background-color: #f7f7f7;
+  border-color: #bbb;
+}
+
+.dropdown-menu {
+  position: absolute;
+  z-index: 1001; /* Выше Leaflet-контролов */
+  background-color: white;
+  min-width: 220px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 5px 0;
+  margin-top: 5px;
+}
+
+.dropdown-item,
+.dropdown-item-checkbox {
+  display: block;
+  width: 100%;
+  padding: 8px 15px;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  box-sizing: border-box;
+}
+
+.dropdown-item:hover,
+.dropdown-item-checkbox:hover {
+  background-color: #f0f0f0;
+}
+
+.dropdown-separator {
+  height: 1px;
+  background-color: #e0e0e0;
+  margin: 5px 0;
+}
+
+/* --- Стили для чекбоксов в меню --- */
+.dropdown-item-checkbox label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  width: 100%;
+}
+
+.dropdown-item-checkbox input[type="checkbox"] {
+  margin-right: 10px;
+}
+
+/* --- НОВЫЕ СТИЛИ для вложенности --- */
+.sub-item {
+  padding-left: 30px !important; /* Отступ для дочерних элементов */
+}
+
+.sub-item-group {
+  padding-left: 15px; /* Контейнер для самой вложенной группы */
+  border-left: 2px solid #f0f0f0;
+  margin-left: 15px;
+}
+
+.sub-sub-item {
+  padding-left: 25px !important; /* Отступ для самого вложенного элемента */
+}
