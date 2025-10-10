@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import useStore from '../useStore';
 import DrawingHandler from './DrawingHandler';
+import AnnotationLayer from './AnnotationLayer'; // Импортируем новый компонент
 
 const nodeIconConfig = {
   source: { emoji: '🏭', color: '#4CAF50' },
@@ -61,7 +62,7 @@ const getMarkerIcon = (nodeType, isMoving, isSelected, isHovered, isEditing) => 
 const MouseProximityHandler = ({ setHoveredNodeId }) => {
   const { nodes } = useStore();
   const map = useMap();
-  const hoverPixelRadius = 50; // Изменено с 30 на 50
+  const hoverPixelRadius = 50;
 
   useMapEvents({
     mousemove: (e) => {
@@ -134,6 +135,8 @@ const Map = ({ drawingMode, setDrawingMode, children }) => {
               }
             }}}
           >
+            {/* Tooltip теперь будет использоваться только для интерактивного отображения при наведении. 
+                А постоянные сноски будут в AnnotationLayer. */}
             <Tooltip direction="top" offset={[0, -13]}>
                 <b>{node.name || 'Без имени'}</b>
                 <br />
@@ -142,6 +145,10 @@ const Map = ({ drawingMode, setDrawingMode, children }) => {
           </Marker>
         )
       })}
+      
+      {/* Добавляем слой со сносками */}
+      <AnnotationLayer />
+
       {children} 
     </MapContainer>
   );
