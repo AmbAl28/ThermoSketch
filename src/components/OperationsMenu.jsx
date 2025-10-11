@@ -4,7 +4,8 @@ import ImportButton from './ImportButton';
 import ExportButton from './ExportButton';
 import ExcelExportButton from './ExcelExportButton';
 import DxfExportButton from './DxfExportButton';
-import GeoJsonExportButton from './GeoJsonExportButton'; // Импортируем новую кнопку
+import GeoJsonExportButton from './GeoJsonExportButton';
+import PdfExportButton from './PdfExportButton'; // Импортируем новую кнопку
 
 const OperationsMenu = ({ onClearProject }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -39,7 +40,8 @@ const OperationsMenu = ({ onClearProject }) => {
           <ExportButton />
           <ExcelExportButton />
           <DxfExportButton />
-          <GeoJsonExportButton /> {/* Добавляем новую кнопку */}
+          <GeoJsonExportButton />
+          <PdfExportButton /> {/* Добавляем новую кнопку */}
           <button className="dropdown-item" onClick={handleClearProject}>
             Очистить проект
           </button>
