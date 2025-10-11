@@ -7,17 +7,55 @@
 
 .map-container {
   flex-grow: 1;
-  position: relative; /* Добавлено для позиционирования оверлеев */
+  position: relative; /* Необходимо для позиционирования оверлеев */
 }
 
-/* --- НОВЫЙ КОНТЕЙНЕР ДЛЯ ОВЕРЛЕЕВ --- */
+/* --- КОНТЕЙНЕР ДЛЯ ОВЕРЛЕЕВ --- */
 .map-overlay-controls {
   position: absolute;
   top: 10px;
-  left: 10px;
-  z-index: 1000; /* Убедимся, что он выше карты */
+  left: 50px; /* Отступ от контролов зума Leaflet (ширина ~30px + отступ 10px)*/
+  z-index: 1000;
   display: flex;
-  gap: 10px; /* Расстояние между кнопками */
+  align-items: flex-start; /* Выравнивание по верху */
+  gap: 10px;
+}
+
+/* --- Стили для кнопок-переключателей верхнего уровня --- */
+.operations-menu .menu-toggle-btn,
+.dropdown-container .dropdown-button {
+  height: 30px; /* Та же высота, что и у кнопок Leaflet */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  box-sizing: border-box; /* Учитываем padding и border в общей высоте */
+  border-radius: 4px !important; /* Важно, чтобы переопределить другие стили */
+  border: 2px solid rgba(0,0,0,0.2);
+  background-color: #fff;
+  color: #333;
+  font-weight: 500;
+  font-size: 1em; /* Устанавливаем одинаковый размер шрифта */
+  cursor: pointer;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+/* Отдельные стили для кнопки Операции, чтобы она не наследовала лишнего */
+.operations-menu .menu-toggle-btn {
+  width: auto; /* Сбрасываем width: 100% */
+  margin-top: 0; /* Сбрасываем margin-top */
+}
+
+.operations-menu .menu-toggle-btn:hover,
+.dropdown-container .dropdown-button:hover {
+  background-color: #f4f4f4;
+}
+
+/* Контейнер Операций больше не нуждается в собственных отступах */
+.operations-menu {
+  margin-top: 0 !important; /* Используем !important для гарантии переопределения */
+  position: relative; /* Убедимся, что position не сброшен */
 }
 
 /* --- Стили боковой панели --- */
@@ -33,7 +71,7 @@
   flex-direction: column;
   transition: width 0.3s ease, min-width 0.3s ease, padding 0.3s ease;
   position: relative; 
-  z-index: 1001; /* Панель должна быть выше оверлеев */ 
+  z-index: 1001;
   overflow-y: auto; 
   box-shadow: 2px 0 5px rgba(0,0,0,0.1);
 }
