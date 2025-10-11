@@ -5,31 +5,25 @@ import { convertToGeoJson } from '../utils/geoJsonConverter';
 const GeoJsonExportButton = () => {
   const handleClick = () => {
     try {
-      // 1. Получаем актуальные данные из хранилища
-      const { nodes, pipes } = useStore.getState();
+      // Получаем все необходимые данные, включая области
+      const { nodes, pipes, areas } = useStore.getState();
       
-      // 2. Вызываем функцию-конвертер
-      const geoJsonData = convertToGeoJson(nodes, pipes);
+      // Передаем все данные в конвертер
+      const geoJsonData = convertToGeoJson(nodes, pipes, areas);
       
-      // 3. Преобразуем объект GeoJSON в строку
       const geoJsonString = JSON.stringify(geoJsonData, null, 2);
-      
-      // 4. Создаём Blob объект
       const blob = new Blob([geoJsonString], { type: 'application/geo+json' });
       
-      // 5. Генерируем временную ссылку и имя файла
       const url = URL.createObjectURL(blob);
       const projectName = 'thermal-network-project';
       const filename = `${projectName}.geojson`;
 
-      // Создаем ссылку для скачивания
       const a = document.createElement('a');
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
       
-      // Очищаем после скачивания
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
