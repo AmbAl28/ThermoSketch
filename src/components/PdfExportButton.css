@@ -1,0 +1,18 @@
+/* src/components/PdfExportButton.css */
+
+.progress-bar-container {
+  width: 100%;
+  background-color: #f3f3f3;
+  border-radius: 4px;
+  margin-top: 5px;
+  height: 8px;
+  overflow: hidden; /* Скрываем то, что выходит за пределы контейнера */
+}
+
+.progress-bar {
+  width: 0%; /* Начальная ширина */
+  height: 100%;
+  background-color: #4caf50; /* Зеленый цвет для прогресса */
+  transition: width 0.3s ease-in-out; /* Плавная анимация изменения ширины */
+  border-radius: 4px;
+}
