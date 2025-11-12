@@ -15,19 +15,22 @@ function isObjectVisible(obj, bounds, viewOptions, hiddenNodeTypes, L) {
         return isPointInBounds([obj.lat, obj.lng], bounds, L);
     }
     if (obj.type === 'pipe') {
-        return obj.vertices.some(v => isPointInBounds(v, bounds, L));
+        // A pipe is visible if at least one of its vertices is in the bounds,
+        // or if the pipe line intersects the bounds.
+        return obj.vertices.some(v => isPointInBounds(v, bounds, L)) || L.polyline(obj.vertices).getBounds().intersects(bounds);
     }
     return false;
 }
 
+// --- ИСПРАВЛЕННАЯ ФУНКЦИЯ РЕНДЕРИНГА ТАЙЛОВ ---
 async function renderHighResolutionTiles(map, exportData, onProgress) {
     const L = (await import('leaflet')).default;
     const html2canvas = (await import('html2canvas')).default;
 
-    const { mapBounds, pdfDimensions } = exportData;
+    const { mapBounds, pdfDimensions, objects } = exportData;
     const fullBounds = L.latLngBounds(mapBounds.southWest, mapBounds.northEast);
 
-    const GRID_DIVISIONS = 2; // Разделим на сетку 2x2 = 4 тайла
+    const GRID_DIVISIONS = 2; // 2x2 grid
     const renderedTiles = [];
 
     const totalLat = fullBounds.getSouth() - fullBounds.getNorth();
@@ -43,11 +46,8 @@ async function renderHighResolutionTiles(map, exportData, onProgress) {
     for (let y = 0; y < GRID_DIVISIONS; y++) {
         for (let x = 0; x < GRID_DIVISIONS; x++) {
             const tileIndex = y * GRID_DIVISIONS + x;
-            const tileProgressStart = (tileIndex / totalTiles) * 100;
-            const tileProgressEnd = ((tileIndex + 1) / totalTiles) * 100;
-            
             console.log(`Рендеринг тайла ${tileIndex + 1}/${totalTiles}...`);
-            onProgress(tileProgressStart);
+            onProgress(tileIndex / totalTiles * 100);
 
             const north = fullBounds.getNorth() + (tileLat * y);
             const west = fullBounds.getWest() + (tileLng * x);
@@ -71,10 +71,26 @@ async function renderHighResolutionTiles(map, exportData, onProgress) {
                     L.tileLayer(layer._url, { ...layer.options, crossOrigin: true }).addTo(tempMap);
                 }
             });
+            
+            // *** НАЧАЛО ИСПРАВЛЕНИЯ: РЕНДЕРИНГ ОБЪЕКТОВ ***
+            objects.pipes.forEach(pipe => {
+                L.polyline(pipe.vertices, { color: 'red', weight: 3 }).addTo(tempMap);
+            });
+
+            objects.nodes.forEach(node => {
+                L.circleMarker([node.lat, node.lng], { 
+                    radius: 5, 
+                    fillColor: "#ff7800", 
+                    color: "#000", 
+                    weight: 1, 
+                    opacity: 1, 
+                    fillOpacity: 0.8 
+                }).addTo(tempMap);
+            });
+            // *** КОНЕЦ ИСПРАВЛЕНИЯ ***
 
             tempMap.fitBounds(tileBounds, { padding: [0, 0] });
 
-            // Даем карте время на загрузку тайлов
             await new Promise(resolve => setTimeout(resolve, 1000)); 
 
             try {
@@ -93,12 +109,13 @@ async function renderHighResolutionTiles(map, exportData, onProgress) {
                 tempMap.remove();
                 renderContainer.remove();
             }
-            onProgress(tileProgressEnd);
         }
     }
+    onProgress(100);
     return renderedTiles;
 }
 
+// --- Функция подготовки данных (без существенных изменений) ---
 export async function preparePdfExportData(get, onProgress) {
     const L = (await import('leaflet')).default;
     onProgress(0);
@@ -117,13 +134,19 @@ export async function preparePdfExportData(get, onProgress) {
     
     onProgress(5);
 
-    const dpi = 150; // Уменьшим DPI для теста, чтобы ускорить процесс
+    const dpi = 150;
     const a0_width_inches = 33.1;
     const a0_height_inches = 46.8;
     const pdfDimensions = {
         width: Math.round(a0_width_inches * dpi),
         height: Math.round(a0_height_inches * dpi),
     };
+    
+    const visibleBounds = mapBounds;
+    const visibleObjects = {
+        nodes: nodes.filter(n => isObjectVisible(n, visibleBounds, viewOptions, hiddenAnnotationNodeTypes, L)),
+        pipes: pipes.filter(p => isObjectVisible(p, visibleBounds, viewOptions, hiddenAnnotationNodeTypes, L)),
+    }
 
     const exportData = {
         mapBounds: {
@@ -131,23 +154,20 @@ export async function preparePdfExportData(get, onProgress) {
             northEast: [mapBounds.getNorthEast().lat, mapBounds.getNorthEast().lng],
         },
         viewSettings: { ...viewOptions },
-        objects: {
-            nodes: nodes.filter(n => isObjectVisible(n, mapBounds, viewOptions, hiddenAnnotationNodeTypes, L)),
-            pipes: pipes.filter(p => isObjectVisible(p, mapBounds, viewOptions, hiddenAnnotationNodeTypes, L)),
-        },
+        objects: visibleObjects, // Передаем отфильтрованные объекты
         pdfDimensions: pdfDimensions,
     };
     
     console.log("Шаг 2: Рендеринг тайлов карты...");
     onProgress(10);
 
-    const tiles = await renderHighResolutionTiles(map, exportData, (p) => onProgress(10 + p * 0.8)); // Прогресс от 10 до 90
+    const tiles = await renderHighResolutionTiles(map, exportData, (p) => onProgress(10 + p * 0.8));
     
     exportData.renderedTiles = tiles;
 
     console.log("Шаг 3: Данные и тайлы карты готовы!");
     console.log("PDF Export Data Prepared:", exportData);
-    alert('Снимки тайлов карты созданы и выведены в консоль.');
+    alert('Снимки тайлов карты (включая объекты) созданы и выведены в консоль.');
     onProgress(100);
 
     return exportData;
