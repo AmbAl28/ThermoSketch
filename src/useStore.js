@@ -80,6 +80,14 @@ const safeJsonStorage = {
 const useStore = create(
   persist(
     (set, get) => ({
+      // --- Карта ---
+      map: null,
+      setMap: (map) => set({ map }),
+      getMapBounds: () => {
+        const map = get().map;
+        return map ? map.getBounds() : null;
+      },
+
       // --- Существующее состояние ---
       nodes: [],
       pipes: [],
@@ -421,6 +429,7 @@ const useStore = create(
           state.areaCreationMode = false;
           state.editingPipeId = null;
           state.editingMode = null;
+          state.map = null; // Не сохраняем объект карты
         }
       }
     }

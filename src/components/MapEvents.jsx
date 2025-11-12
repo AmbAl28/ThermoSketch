@@ -3,7 +3,11 @@ import useStore from '../useStore';
 import { useEffect, useState } from 'react';
 
 const MapEvents = ({ setDrawingMode }) => {
-  const { areaCreationMode, addArea, toggleAreaCreationMode } = useStore();
+  // Select state and actions separately to prevent re-renders from new object creation
+  const areaCreationMode = useStore(state => state.areaCreationMode);
+  const addArea = useStore(state => state.addArea);
+  const setMap = useStore(state => state.setMap);
+
   const [firstCorner, setFirstCorner] = useState(null);
 
   const map = useMapEvents({
@@ -14,23 +18,43 @@ const MapEvents = ({ setDrawingMode }) => {
         } else {
           const secondCorner = e.latlng;
           const bounds = [[firstCorner.lat, firstCorner.lng], [secondCorner.lat, secondCorner.lng]];
-          addArea(bounds);
+          addArea(bounds); // This action also sets areaCreationMode to false
           setFirstCorner(null);
-          setDrawingMode('none');
+          if (setDrawingMode) {
+              setDrawingMode('none');
+          }
         }
       }
     },
   });
-
+  
+  // Share map instance with the store.
+  // This useEffect will only run when the map instance or setMap function changes.
+  // Both are stable across re-renders of this component itself.
   useEffect(() => {
+    setMap(map);
+    // On component unmount, clear the map instance from the store
+    return () => setMap(null);
+  }, [map, setMap]);
+
+  // Handle cursor style for area creation
+  useEffect(() => {
+    const container = map.getContainer();
     if (areaCreationMode) {
-      map.getContainer().style.cursor = 'crosshair';
+      container.style.cursor = 'crosshair';
     } else {
-      map.getContainer().style.cursor = '';
+      container.style.cursor = '';
     }
     
+    // Cleanup cursor style
     return () => {
-        map.getContainer().style.cursor = '';
+        try {
+            if(container) {
+                container.style.cursor = '';
+            }
+        } catch(e) {
+            // The container may already be unmounted if the component unmounts.
+        }
     }
   }, [areaCreationMode, map]);
 

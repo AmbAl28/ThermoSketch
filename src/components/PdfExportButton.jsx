@@ -1,11 +1,18 @@
 import React from 'react';
-import './DropdownMenu.css'; // Используем те же стили для консистентности
+import useStore from '../useStore';
+import { preparePdfExportData } from '../utils/pdfExportUtils';
+import './DropdownMenu.css';
 
 const PdfExportButton = () => {
+  // We need a way to get the current state without subscribing to changes,
+  // because we only need it at the moment the button is clicked.
+  // useStore.getState() gives us exactly that.
+  const { getState } = useStore;
+
   const handleExport = () => {
-    // TODO: Реализовать логику экспорта в PDF
-    console.log('Экспорт в PDF пока не реализован.');
-    alert('Функция экспорта в PDF находится в разработке.');
+    // Call the data preparation function, passing it the `get` function
+    // so it can access the latest state from the store.
+    preparePdfExportData(getState);
   };
 
   return (
