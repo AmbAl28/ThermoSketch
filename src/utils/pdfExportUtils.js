@@ -1,266 +1,197 @@
-function isPointInBounds(point, bounds, L) {
+
+import { jsPDF } from "jspdf";
+
+// --- Утилиты для проверки видимости (остаются без изменений) ---
+function isPointInBounds(point, bounds) {
     const [lat, lng] = point;
     const sw = bounds.getSouthWest();
     const ne = bounds.getNorthEast();
-    const latCheck = lat >= sw.lat && lat <= ne.lat;
-    const lngCheck = lng >= sw.lng && lng <= ne.lng;
-    return latCheck && lngCheck;
+    return lat >= sw.lat && lat <= ne.lat && lng >= sw.lng && lng <= ne.lng;
 }
 
 function isObjectVisible(obj, bounds, viewOptions, hiddenNodeTypes, L) {
     if (obj.type === 'node') {
-        if (Array.isArray(hiddenNodeTypes) && hiddenNodeTypes.includes(obj.nodeType)) {
-            return false;
-        }
-        return isPointInBounds([obj.lat, obj.lng], bounds, L);
+        if (Array.isArray(hiddenNodeTypes) && hiddenNodeTypes.includes(obj.nodeType)) return false;
+        return isPointInBounds([obj.lat, obj.lng], bounds);
     }
     if (obj.type === 'pipe') {
-        return obj.vertices.some(v => isPointInBounds(v, bounds, L)) || L.polyline(obj.vertices).getBounds().intersects(bounds);
+        return obj.vertices.some(v => isPointInBounds(v, bounds)) || L.polyline(obj.vertices).getBounds().intersects(bounds);
     }
     return false;
 }
 
-function renderMapElements(tempMap, objects, viewOptions, styleSettings, dpi, L) {
-    const ptToPx = (pt) => pt * (dpi / 72);
-    const nodeFontSize = Math.round(ptToPx(8));
-    const pipeFontSize = Math.round(ptToPx(7));
-
+// --- Рендеринг элементов карты (узлы и трубы, без аннотаций) ---
+function renderMapElements(tempMap, objects, viewOptions, styleSettings, L) {
     objects.pipes.forEach(pipe => {
         const pipeColor = styleSettings?.pipes?.color || '#003366';
         const pipeWeight = styleSettings?.pipes?.weight || 3;
-
-        const pipePolyline = L.polyline(pipe.vertices, {
-            color: pipeColor, 
-            weight: pipeWeight 
-        });
-        pipePolyline.addTo(tempMap);
-
-        if (viewOptions.showPipeAnnotations && pipe.annotation) {
-            const center = pipePolyline.getCenter();
-            const labelText = pipe.annotation;
-            const annotationHtml = `
-                <div style="
-                    font-size: ${pipeFontSize}px; 
-                    font-weight: bold; 
-                    color: ${pipeColor};
-                    background-color: rgba(255, 255, 255, 0.8);
-                    padding: 1px 4px;
-                    border-radius: 3px;
-                    white-space: nowrap;
-                    transform: translate(-50%, -50%);
-                ">
-                    ${labelText}
-                </div>`;
-
-            const annotationIcon = L.divIcon({ html: annotationHtml, className: '', iconSize: [0, 0], iconAnchor: [0, 0] });
-            L.marker(center, { icon: annotationIcon }).addTo(tempMap);
-        }
+        L.polyline(pipe.vertices, { color: pipeColor, weight: pipeWeight }).addTo(tempMap);
     });
 
     objects.nodes.forEach(node => {
-        const radius = viewOptions.forceLargeNodes
-            ? (styleSettings?.nodes?.radius?.large || 8)
-            : (styleSettings?.nodes?.radius?.default || 4);
-        
-        const fillColor = (styleSettings?.nodes?.colors && styleSettings.nodes.colors[node.nodeType])
-            ? styleSettings.nodes.colors[node.nodeType]
-            : '#ff7800';
-
-        L.circleMarker([node.lat, node.lng], { 
-            radius: radius,
-            fillColor: fillColor, 
-            color: "#000", 
-            weight: 1, 
-            opacity: 1, 
-            fillOpacity: 0.9 
-        }).addTo(tempMap);
-
-        if (viewOptions.showNodeAnnotations && node.annotation) {
-            const labelText = node.annotation;
-            const annotationHtml = `
-                <div style="
-                    font-size: ${nodeFontSize}px; 
-                    font-weight: bold; 
-                    color: #000000; 
-                    background-color: rgba(255, 255, 255, 0.75);
-                    padding: 2px 5px;
-                    border-radius: 3px;
-                    border: 1px solid #ccc;
-                    white-space: nowrap;
-                    transform: translate(-50%, 15px);
-                ">
-                    ${labelText}
-                </div>`;
-
-            const annotationIcon = L.divIcon({ html: annotationHtml, className: '', iconSize: [0, 0], iconAnchor: [0, 0] });
-            L.marker([node.lat, node.lng], { icon: annotationIcon }).addTo(tempMap);
-        }
+        const radius = viewOptions.forceLargeNodes ? (styleSettings?.nodes?.radius?.large || 8) : (styleSettings?.nodes?.radius?.default || 4);
+        const fillColor = (styleSettings?.nodes?.colors && styleSettings.nodes.colors[node.nodeType]) || '#ff7800';
+        L.circleMarker([node.lat, node.lng], { radius, fillColor, color: "#000", weight: 1, opacity: 1, fillOpacity: 0.9 }).addTo(tempMap);
     });
 }
 
-async function renderHighResolutionTiles(map, exportData, onProgress) {
+// --- ШАГ 2: Рендеринг ЕДИНОГО холста на основе вида пользователя ---
+async function renderHighResolutionImage(map, exportData, onProgress) {
     const L = (await import('leaflet')).default;
     const html2canvas = (await import('html2canvas')).default;
 
-    const { mapBounds, pdfDimensions, objects, viewSettings, styleSettings, dpi } = exportData;
-    const fullBounds = L.latLngBounds(mapBounds.southWest, mapBounds.northEast);
+    const { pdfDimensions, objects, viewSettings, styleSettings, center, zoom } = exportData;
 
-    const GRID_DIVISIONS = 2;
-    const renderedTiles = [];
+    onProgress(15, "Создание холста для рендеринга...");
 
-    const totalLat = fullBounds.getSouth() - fullBounds.getNorth();
-    const totalLng = fullBounds.getEast() - fullBounds.getWest();
-    const tileLat = totalLat / GRID_DIVISIONS;
-    const tileLng = totalLng / GRID_DIVISIONS;
+    const renderContainer = document.createElement('div');
+    Object.assign(renderContainer.style, {
+        position: 'absolute', top: '-99999px', left: '-99999px',
+        width: `${pdfDimensions.width}px`, height: `${pdfDimensions.height}px`
+    });
+    document.body.appendChild(renderContainer);
 
-    const tilePixelWidth = Math.round(pdfDimensions.width / GRID_DIVISIONS);
-    const tilePixelHeight = Math.round(pdfDimensions.height / GRID_DIVISIONS);
-    
-    const totalTiles = GRID_DIVISIONS * GRID_DIVISIONS;
-
-    for (let y = 0; y < GRID_DIVISIONS; y++) {
-        for (let x = 0; x < GRID_DIVISIONS; x++) {
-            const tileIndex = y * GRID_DIVISIONS + x;
-            onProgress((tileIndex / totalTiles) * 100);
-
-            const north = fullBounds.getNorth() + (tileLat * y);
-            const west = fullBounds.getWest() + (tileLng * x);
-            const south = north + tileLat;
-            const east = west + tileLng;
-
-            const tileBounds = L.latLngBounds([south, west], [north, east]);
-
-            const renderContainer = document.createElement('div');
-            renderContainer.style.position = 'absolute';
-            renderContainer.style.top = '-9999px';
-            renderContainer.style.left = '-9999px';
-            renderContainer.style.width = `${tilePixelWidth}px`;
-            renderContainer.style.height = `${tilePixelHeight}px`;
-            document.body.appendChild(renderContainer);
-
-            const tempMap = L.map(renderContainer, { preferCanvas: true, attributionControl: false, zoomControl: false });
-            
-            map.eachLayer(layer => {
-                if (layer instanceof L.TileLayer) {
-                    L.tileLayer(layer._url, { ...layer.options, crossOrigin: true }).addTo(tempMap);
-                }
-            });
-            
-            renderMapElements(tempMap, objects, viewSettings, styleSettings, dpi, L);
-
-            tempMap.fitBounds(tileBounds, { padding: [0, 0] });
-
-            await new Promise(resolve => setTimeout(resolve, 1000)); 
-
-            try {
-                const canvas = await html2canvas(renderContainer, {
-                    useCORS: true, scale: 1, width: tilePixelWidth, height: tilePixelHeight, logging: false });
-                const dataUrl = canvas.toDataURL('image/png');
-                renderedTiles.push({ dataUrl, x, y });
-            } catch (err) {
-                console.error(`Ошибка при рендеринге тайла ${x},${y}:`, err);
-            } finally {
-                tempMap.remove();
-                renderContainer.remove();
-            }
-        }
-    }
-    return renderedTiles;
-}
-
-async function assembleTilesToFinalImage(exportData) {
-    const { renderedTiles, pdfDimensions } = exportData;
-    const GRID_DIVISIONS = 2; 
-
-    const finalCanvas = document.createElement('canvas');
-    finalCanvas.width = pdfDimensions.width;
-    finalCanvas.height = pdfDimensions.height;
-    const ctx = finalCanvas.getContext('2d');
-
-    const tilePixelWidth = Math.round(pdfDimensions.width / GRID_DIVISIONS);
-    const tilePixelHeight = Math.round(pdfDimensions.height / GRID_DIVISIONS);
-
-    const drawPromises = renderedTiles.map(tile => {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                const dx = tile.x * tilePixelWidth;
-                const dy = tile.y * tilePixelHeight;
-                ctx.drawImage(img, dx, dy, tilePixelWidth, tilePixelHeight);
-                resolve();
-            };
-            img.onerror = (err) => {
-                console.error(`Ошибка загрузки изображения для тайла ${tile.x},${tile.y}`);
-                reject(err);
-            };
-            img.src = tile.dataUrl;
-        });
+    const tempMap = L.map(renderContainer, {
+        preferCanvas: true, attributionControl: false, zoomControl: false, fadeAnimation: false
     });
 
-    await Promise.all(drawPromises);
+    map.eachLayer(layer => {
+        if (layer instanceof L.TileLayer && layer._url) {
+            L.tileLayer(layer._url, { ...layer.options, crossOrigin: 'anonymous' }).addTo(tempMap);
+        }
+    });
 
-    return finalCanvas.toDataURL('image/png');
+    // *** КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Устанавливаем вид по центру и зуму пользователя ***
+    tempMap.setView(center, zoom);
+    
+    renderMapElements(tempMap, objects, viewSettings, styleSettings, L);
+
+    onProgress(35, "Ожидание полной прорисовки карты...");
+    await new Promise(r => setTimeout(r, 4000));
+
+    onProgress(60, "Создание скриншота карты...");
+    const fullCanvas = await html2canvas(renderContainer, { useCORS: true, scale: 1, logging: false });
+    
+    // Получаем реальные границы после установки вида
+    const finalBounds = tempMap.getBounds();
+
+    tempMap.remove();
+    renderContainer.remove();
+
+    onProgress(85, "Конвертация изображения...");
+    return { 
+        imageData: fullCanvas.toDataURL('image/jpeg', 0.95), 
+        finalBounds: finalBounds
+    };
+}
+
+// --- ШАГ 3: Генерация PDF с векторным текстом ---
+async function generatePdfDocument(exportData) {
+    const { finalImage, objects, viewSettings, finalBounds, styleSettings } = exportData;
+    const L = (await import('leaflet')).default;
+
+    const A0_HEIGHT_MM = 1189;
+    const A0_WIDTH_MM = 841;
+
+    const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: [A0_HEIGHT_MM, A0_WIDTH_MM] });
+
+    pdf.addImage(finalImage, 'JPEG', 0, 0, A0_HEIGHT_MM, A0_WIDTH_MM, undefined, 'FAST');
+    
+    const southWest = finalBounds.getSouthWest();
+    const northEast = finalBounds.getNorthEast();
+    const latSpan = northEast.lat - southWest.lat;
+    const lngSpan = northEast.lng - southWest.lng;
+
+    const project = (lat, lng) => {
+        const latRatio = (lat - southWest.lat) / latSpan;
+        const lngRatio = (lng - southWest.lng) / lngSpan;
+        return { x: lngRatio * A0_HEIGHT_MM, y: (1 - latRatio) * A0_WIDTH_MM };
+    };
+    
+    const ptToMm = (pt) => pt * 0.352778;
+
+    if (viewSettings.showPipeAnnotations) {
+        const pipeFontSize = ptToMm(8);
+        pdf.setFontSize(pipeFontSize * 2);
+        objects.pipes.forEach(pipe => {
+            if (pipe.annotation) {
+                const center = L.polyline(pipe.vertices).getCenter();
+                const { x, y } = project(center.lat, center.lng);
+                pdf.setTextColor(styleSettings?.pipes?.color || '#003366');
+                pdf.text(pipe.annotation, x, y, { align: 'center' });
+            }
+        });
+    }
+    
+    if (viewSettings.showNodeAnnotations) {
+        const nodeFontSize = ptToMm(9);
+        pdf.setFontSize(nodeFontSize * 2);
+        pdf.setTextColor('#000000');
+        objects.nodes.forEach(node => {
+            if (node.annotation) {
+                const { x, y } = project(node.lat, node.lng);
+                const yOffset = ptToMm(4);
+                pdf.text(node.annotation, x, y + yOffset, { align: 'center' });
+            }
+        });
+    }
+    
+    pdf.save('ThermoSketch-Export-A0.pdf');
 }
 
 
+// --- Основная функция экспорта ---
 export async function preparePdfExportData(get, onProgress) {
     const L = (await import('leaflet')).default;
-    onProgress(0);
-    console.log("Шаг 1: Подготовка данных...");
+    try {
+        onProgress(0, "Шаг 1: Подготовка данных...");
+        const { viewOptions, nodes, pipes, map, styleSettings } = get();
 
-    const { getMapBounds, viewOptions, nodes, pipes, map, styleSettings } = get();
-    const { hiddenAnnotationNodeTypes } = viewOptions || {};
-    const mapBounds = getMapBounds();
+        if (!map) throw new Error("Карта недоступна.");
 
-    if (!map || !mapBounds) {
-        console.error("Экземпляр карты или ее границы недоступны.");
-        alert("Не удалось получить доступ к карте.");
-        onProgress(100); 
-        return null;
+        // *** ИСПРАВЛЕНИЕ: Захватываем ЦЕНТР и ЗУМ пользователя ***
+        const center = map.getCenter();
+        const zoom = map.getZoom();
+
+        const dpi = 300;
+        // *** ИСПРАВЛЕНИЕ: Используем альбомные пропорции A0 ***
+        const pdfDimensions = { 
+            width: Math.round(46.8 * dpi),
+            height: Math.round(33.1 * dpi) 
+        };
+
+        const exportData = {
+            center, zoom, // Передаем вид пользователя
+            pdfDimensions,
+            objects: { nodes, pipes }, // Передаем все объекты, видимость проверим позже
+            viewSettings: { ...viewOptions }, 
+            styleSettings, 
+            dpi
+        };
+        
+        onProgress(10, "Шаг 2: Рендеринг карты высокого разрешения...");
+        const { imageData, finalBounds } = await renderHighResolutionImage(map, exportData, onProgress);
+
+        // Передаем финальные данные в генератор PDF
+        exportData.finalImage = imageData;
+        exportData.finalBounds = finalBounds;
+
+        // Фильтруем объекты, которые попали в итоговые границы
+        exportData.objects = {
+            nodes: nodes.filter(n => isObjectVisible(n, finalBounds, viewOptions, viewOptions.hiddenAnnotationNodeTypes, L)),
+            pipes: pipes.filter(p => isObjectVisible(p, finalBounds, viewOptions, viewOptions.hiddenAnnotationNodeTypes, L)),
+        }
+        
+        onProgress(90, "Шаг 3: Генерация PDF документа...");
+        await generatePdfDocument(exportData);
+
+        onProgress(100, "Экспорт завершен!");
+        alert('PDF-документ был успешно сгенерирован и сохранен.');
+
+    } catch (error) {
+        console.error("Ошибка экспорта в PDF:", error);
+        alert(`Произошла критическая ошибка: ${error.message}`);
+        onProgress(100, "Ошибка экспорта.");
     }
-    
-    onProgress(5);
-
-    const dpi = 300; // <--- ИЗМЕНЕНО НА 300 (КОМПРОМИСС)
-    const a0_width_inches = 33.1;
-    const a0_height_inches = 46.8;
-    const pdfDimensions = {
-        width: Math.round(a0_width_inches * dpi),
-        height: Math.round(a0_height_inches * dpi),
-    };
-    
-    const visibleBounds = mapBounds;
-    const visibleObjects = {
-        nodes: nodes.filter(n => isObjectVisible(n, visibleBounds, viewOptions, hiddenAnnotationNodeTypes, L)),
-        pipes: pipes.filter(p => isObjectVisible(p, visibleBounds, viewOptions, hiddenAnnotationNodeTypes, L)),
-    }
-
-    const exportData = {
-        mapBounds: {
-            southWest: [mapBounds.getSouthWest().lat, mapBounds.getSouthWest().lng],
-            northEast: [mapBounds.getNorthEast().lat, mapBounds.getNorthEast().lng],
-        },
-        viewSettings: { ...viewOptions },
-        styleSettings: styleSettings,
-        objects: visibleObjects,
-        pdfDimensions: pdfDimensions,
-        dpi: dpi,
-    };
-    
-    console.log(`Шаг 2: Рендеринг тайлов карты (4 шт.) при ${dpi} DPI...`);
-    const tiles = await renderHighResolutionTiles(map, exportData, (p) => onProgress(10 + p * 0.8));
-    exportData.renderedTiles = tiles;
-    onProgress(90);
-
-    console.log("Шаг 3: Сборка итогового изображения...");
-    const finalImage = await assembleTilesToFinalImage(exportData);
-    exportData.finalImage = finalImage;
-    onProgress(95);
-
-    console.log("Шаг 4: Данные и финальное изображение готовы!");
-    console.log("Готовое изображение (Data URL):", exportData.finalImage);
-    alert('Финальное изображение успешно собрано и выведено в консоль в виде Data URL.');
-    onProgress(100);
-
-    return exportData;
+    return null;
 }
