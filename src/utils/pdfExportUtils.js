@@ -15,19 +15,93 @@ function isObjectVisible(obj, bounds, viewOptions, hiddenNodeTypes, L) {
         return isPointInBounds([obj.lat, obj.lng], bounds, L);
     }
     if (obj.type === 'pipe') {
-        // A pipe is visible if at least one of its vertices is in the bounds,
-        // or if the pipe line intersects the bounds.
         return obj.vertices.some(v => isPointInBounds(v, bounds, L)) || L.polyline(obj.vertices).getBounds().intersects(bounds);
     }
     return false;
 }
 
-// --- ИСПРАВЛЕННАЯ ФУНКЦИЯ РЕНДЕРИНГА ТАЙЛОВ ---
+// --- ОБНОВЛЕННАЯ ФУНКЦИЯ: РЕНДЕРИНГ ЭЛЕМЕНТОВ КАРТЫ ---
+function renderMapElements(tempMap, objects, viewOptions, L) {
+    // Рендеринг труб и их аннотаций
+    objects.pipes.forEach(pipe => {
+        const pipePolyline = L.polyline(pipe.vertices, { color: '#003366', weight: 3 });
+        pipePolyline.addTo(tempMap);
+
+        // Проверяем, нужно ли показывать аннотации и есть ли они у трубы
+        if (viewOptions.showPipeAnnotations && pipe.annotation) {
+            const center = pipePolyline.getCenter(); // Находим центр трубы
+            const labelText = pipe.annotation;
+            const annotationHtml = `
+                <div style="
+                    font-size: 12px; 
+                    font-weight: bold; 
+                    color: #003366;
+                    background-color: rgba(255, 255, 255, 0.8);
+                    padding: 1px 4px;
+                    border-radius: 3px;
+                    white-space: nowrap;
+                    transform: translate(-50%, -50%); /* Центрируем точно по точке */
+                ">
+                    ${labelText}
+                </div>`;
+
+            const annotationIcon = L.divIcon({
+                html: annotationHtml,
+                className: '',
+                iconSize: [0, 0],
+                iconAnchor: [0, 0]
+            });
+
+            L.marker(center, { icon: annotationIcon }).addTo(tempMap);
+        }
+    });
+
+    // Рендеринг узлов и их аннотаций
+    objects.nodes.forEach(node => {
+        L.circleMarker([node.lat, node.lng], { 
+            radius: 5, 
+            fillColor: "#ff7800", 
+            color: "#000", 
+            weight: 1, 
+            opacity: 1, 
+            fillOpacity: 0.9 
+        }).addTo(tempMap);
+
+        if (viewOptions.showNodeAnnotations && node.annotation) {
+            const labelText = node.annotation;
+            const annotationHtml = `
+                <div style="
+                    font-size: 14px; 
+                    font-weight: bold; 
+                    color: #000000; 
+                    background-color: rgba(255, 255, 255, 0.75);
+                    padding: 2px 5px;
+                    border-radius: 3px;
+                    border: 1px solid #ccc;
+                    white-space: nowrap;
+                    transform: translate(-50%, 15px); /* Смещаем ниже и по центру */
+                ">
+                    ${labelText}
+                </div>`;
+
+            const annotationIcon = L.divIcon({
+                html: annotationHtml,
+                className: '',
+                iconSize: [0, 0],
+                iconAnchor: [0, 0]
+            });
+
+            L.marker([node.lat, node.lng], { icon: annotationIcon }).addTo(tempMap);
+        }
+    });
+}
+
+
 async function renderHighResolutionTiles(map, exportData, onProgress) {
     const L = (await import('leaflet')).default;
     const html2canvas = (await import('html2canvas')).default;
 
-    const { mapBounds, pdfDimensions, objects } = exportData;
+    const { mapBounds, pdfDimensions, objects, viewSettings } = exportData;
     const fullBounds = L.latLngBounds(mapBounds.southWest, mapBounds.northEast);
 
     const GRID_DIVISIONS = 2; // 2x2 grid
@@ -72,22 +146,7 @@ async function renderHighResolutionTiles(map, exportData, onProgress) {
                 }
             });
             
-            // *** НАЧАЛО ИСПРАВЛЕНИЯ: РЕНДЕРИНГ ОБЪЕКТОВ ***
-            objects.pipes.forEach(pipe => {
-                L.polyline(pipe.vertices, { color: 'red', weight: 3 }).addTo(tempMap);
-            });
-
-            objects.nodes.forEach(node => {
-                L.circleMarker([node.lat, node.lng], { 
-                    radius: 5, 
-                    fillColor: "#ff7800", 
-                    color: "#000", 
-                    weight: 1, 
-                    opacity: 1, 
-                    fillOpacity: 0.8 
-                }).addTo(tempMap);
-            });
-            // *** КОНЕЦ ИСПРАВЛЕНИЯ ***
+            renderMapElements(tempMap, objects, viewSettings, L);
 
             tempMap.fitBounds(tileBounds, { padding: [0, 0] });
 
@@ -115,7 +174,7 @@ async function renderHighResolutionTiles(map, exportData, onProgress) {
     return renderedTiles;
 }
 
-// --- Функция подготовки данных (без существенных изменений) ---
+
 export async function preparePdfExportData(get, onProgress) {
     const L = (await import('leaflet')).default;
     onProgress(0);
@@ -154,7 +213,7 @@ export async function preparePdfExportData(get, onProgress) {
             northEast: [mapBounds.getNorthEast().lat, mapBounds.getNorthEast().lng],
         },
         viewSettings: { ...viewOptions },
-        objects: visibleObjects, // Передаем отфильтрованные объекты
+        objects: visibleObjects,
         pdfDimensions: pdfDimensions,
     };
     
@@ -167,7 +226,7 @@ export async function preparePdfExportData(get, onProgress) {
 
     console.log("Шаг 3: Данные и тайлы карты готовы!");
     console.log("PDF Export Data Prepared:", exportData);
-    alert('Снимки тайлов карты (включая объекты) созданы и выведены в консоль.');
+    alert('Снимки тайлов с аннотациями узлов и труб созданы.');
     onProgress(100);
 
     return exportData;
