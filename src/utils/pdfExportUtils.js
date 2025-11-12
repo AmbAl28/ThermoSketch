@@ -21,46 +21,58 @@ function isObjectVisible(obj, bounds, viewOptions, hiddenNodeTypes, L) {
 }
 
 // --- ОБНОВЛЕННАЯ ФУНКЦИЯ: РЕНДЕРИНГ ЭЛЕМЕНТОВ КАРТЫ ---
-function renderMapElements(tempMap, objects, viewOptions, L) {
+function renderMapElements(tempMap, objects, viewOptions, styleSettings, dpi, L) {
+    // --- ВЫЧИСЛЕНИЕ РАЗМЕРОВ ШРИФТОВ НА ОСНОВЕ DPI ---
+    const ptToPx = (pt) => pt * (dpi / 72);
+    const nodeFontSize = Math.round(ptToPx(8)); // Базовый размер 8pt для узлов
+    const pipeFontSize = Math.round(ptToPx(7)); // Базовый размер 7pt для труб
+
     // Рендеринг труб и их аннотаций
     objects.pipes.forEach(pipe => {
-        const pipePolyline = L.polyline(pipe.vertices, { color: '#003366', weight: 3 });
+        const pipeColor = styleSettings?.pipes?.color || '#003366';
+        const pipeWeight = styleSettings?.pipes?.weight || 3;
+
+        const pipePolyline = L.polyline(pipe.vertices, {
+            color: pipeColor, 
+            weight: pipeWeight 
+        });
         pipePolyline.addTo(tempMap);
 
-        // Проверяем, нужно ли показывать аннотации и есть ли они у трубы
         if (viewOptions.showPipeAnnotations && pipe.annotation) {
-            const center = pipePolyline.getCenter(); // Находим центр трубы
+            const center = pipePolyline.getCenter();
             const labelText = pipe.annotation;
             const annotationHtml = `
                 <div style="
-                    font-size: 12px; 
+                    font-size: ${pipeFontSize}px; 
                     font-weight: bold; 
-                    color: #003366;
+                    color: ${pipeColor};
                     background-color: rgba(255, 255, 255, 0.8);
                     padding: 1px 4px;
                     border-radius: 3px;
                     white-space: nowrap;
-                    transform: translate(-50%, -50%); /* Центрируем точно по точке */
+                    transform: translate(-50%, -50%);
                 ">
                     ${labelText}
                 </div>`;
 
-            const annotationIcon = L.divIcon({
-                html: annotationHtml,
-                className: '',
-                iconSize: [0, 0],
-                iconAnchor: [0, 0]
-            });
-
+            const annotationIcon = L.divIcon({ html: annotationHtml, className: '', iconSize: [0, 0], iconAnchor: [0, 0] });
             L.marker(center, { icon: annotationIcon }).addTo(tempMap);
         }
     });
 
     // Рендеринг узлов и их аннотаций
     objects.nodes.forEach(node => {
+        const radius = viewOptions.forceLargeNodes
+            ? (styleSettings?.nodes?.radius?.large || 8)
+            : (styleSettings?.nodes?.radius?.default || 4);
+        
+        const fillColor = (styleSettings?.nodes?.colors && styleSettings.nodes.colors[node.nodeType])
+            ? styleSettings.nodes.colors[node.nodeType]
+            : '#ff7800';
+
         L.circleMarker([node.lat, node.lng], { 
-            radius: 5, 
-            fillColor: "#ff7800", 
+            radius: radius,
+            fillColor: fillColor, 
             color: "#000", 
             weight: 1, 
             opacity: 1, 
@@ -71,7 +83,7 @@ function renderMapElements(tempMap, objects, viewOptions, L) {
             const labelText = node.annotation;
             const annotationHtml = `
                 <div style="
-                    font-size: 14px; 
+                    font-size: ${nodeFontSize}px; 
                     font-weight: bold; 
                     color: #000000; 
                     background-color: rgba(255, 255, 255, 0.75);
@@ -79,18 +91,12 @@ function renderMapElements(tempMap, objects, viewOptions, L) {
                     border-radius: 3px;
                     border: 1px solid #ccc;
                     white-space: nowrap;
-                    transform: translate(-50%, 15px); /* Смещаем ниже и по центру */
+                    transform: translate(-50%, 15px);
                 ">
                     ${labelText}
                 </div>`;
 
-            const annotationIcon = L.divIcon({
-                html: annotationHtml,
-                className: '',
-                iconSize: [0, 0],
-                iconAnchor: [0, 0]
-            });
-
+            const annotationIcon = L.divIcon({ html: annotationHtml, className: '', iconSize: [0, 0], iconAnchor: [0, 0] });
             L.marker([node.lat, node.lng], { icon: annotationIcon }).addTo(tempMap);
         }
     });
@@ -101,10 +107,10 @@ async function renderHighResolutionTiles(map, exportData, onProgress) {
     const L = (await import('leaflet')).default;
     const html2canvas = (await import('html2canvas')).default;
 
-    const { mapBounds, pdfDimensions, objects, viewSettings } = exportData;
+    const { mapBounds, pdfDimensions, objects, viewSettings, styleSettings, dpi } = exportData;
     const fullBounds = L.latLngBounds(mapBounds.southWest, mapBounds.northEast);
 
-    const GRID_DIVISIONS = 2; // 2x2 grid
+    const GRID_DIVISIONS = 2;
     const renderedTiles = [];
 
     const totalLat = fullBounds.getSouth() - fullBounds.getNorth();
@@ -146,7 +152,7 @@ async function renderHighResolutionTiles(map, exportData, onProgress) {
                 }
             });
             
-            renderMapElements(tempMap, objects, viewSettings, L);
+            renderMapElements(tempMap, objects, viewSettings, styleSettings, dpi, L);
 
             tempMap.fitBounds(tileBounds, { padding: [0, 0] });
 
@@ -154,12 +160,7 @@ async function renderHighResolutionTiles(map, exportData, onProgress) {
 
             try {
                 const canvas = await html2canvas(renderContainer, {
-                    useCORS: true,
-                    scale: 1,
-                    width: tilePixelWidth,
-                    height: tilePixelHeight,
-                    logging: false,
-                });
+                    useCORS: true, scale: 1, width: tilePixelWidth, height: tilePixelHeight, logging: false });
                 const dataUrl = canvas.toDataURL('image/png');
                 renderedTiles.push({ dataUrl, x, y });
             } catch (err) {
@@ -180,7 +181,7 @@ export async function preparePdfExportData(get, onProgress) {
     onProgress(0);
     console.log("Шаг 1: Подготовка данных...");
 
-    const { getMapBounds, viewOptions, nodes, pipes, map } = get();
+    const { getMapBounds, viewOptions, nodes, pipes, map, styleSettings } = get();
     const { hiddenAnnotationNodeTypes } = viewOptions || {};
     const mapBounds = getMapBounds();
 
@@ -213,8 +214,10 @@ export async function preparePdfExportData(get, onProgress) {
             northEast: [mapBounds.getNorthEast().lat, mapBounds.getNorthEast().lng],
         },
         viewSettings: { ...viewOptions },
+        styleSettings: styleSettings,
         objects: visibleObjects,
         pdfDimensions: pdfDimensions,
+        dpi: dpi, // <--- ДОБАВЛЕНО DPI
     };
     
     console.log("Шаг 2: Рендеринг тайлов карты...");
@@ -226,7 +229,7 @@ export async function preparePdfExportData(get, onProgress) {
 
     console.log("Шаг 3: Данные и тайлы карты готовы!");
     console.log("PDF Export Data Prepared:", exportData);
-    alert('Снимки тайлов с аннотациями узлов и труб созданы.');
+    alert('Снимки тайлов с масштабируемыми шрифтами созданы.');
     onProgress(100);
 
     return exportData;
