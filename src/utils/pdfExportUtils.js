@@ -20,14 +20,11 @@ function isObjectVisible(obj, bounds, viewOptions, hiddenNodeTypes, L) {
     return false;
 }
 
-// --- ОБНОВЛЕННАЯ ФУНКЦИЯ: РЕНДЕРИНГ ЭЛЕМЕНТОВ КАРТЫ ---
 function renderMapElements(tempMap, objects, viewOptions, styleSettings, dpi, L) {
-    // --- ВЫЧИСЛЕНИЕ РАЗМЕРОВ ШРИФТОВ НА ОСНОВЕ DPI ---
     const ptToPx = (pt) => pt * (dpi / 72);
-    const nodeFontSize = Math.round(ptToPx(8)); // Базовый размер 8pt для узлов
-    const pipeFontSize = Math.round(ptToPx(7)); // Базовый размер 7pt для труб
+    const nodeFontSize = Math.round(ptToPx(8));
+    const pipeFontSize = Math.round(ptToPx(7));
 
-    // Рендеринг труб и их аннотаций
     objects.pipes.forEach(pipe => {
         const pipeColor = styleSettings?.pipes?.color || '#003366';
         const pipeWeight = styleSettings?.pipes?.weight || 3;
@@ -60,7 +57,6 @@ function renderMapElements(tempMap, objects, viewOptions, styleSettings, dpi, L)
         }
     });
 
-    // Рендеринг узлов и их аннотаций
     objects.nodes.forEach(node => {
         const radius = viewOptions.forceLargeNodes
             ? (styleSettings?.nodes?.radius?.large || 8)
@@ -102,7 +98,6 @@ function renderMapElements(tempMap, objects, viewOptions, styleSettings, dpi, L)
     });
 }
 
-
 async function renderHighResolutionTiles(map, exportData, onProgress) {
     const L = (await import('leaflet')).default;
     const html2canvas = (await import('html2canvas')).default;
@@ -126,8 +121,7 @@ async function renderHighResolutionTiles(map, exportData, onProgress) {
     for (let y = 0; y < GRID_DIVISIONS; y++) {
         for (let x = 0; x < GRID_DIVISIONS; x++) {
             const tileIndex = y * GRID_DIVISIONS + x;
-            console.log(`Рендеринг тайла ${tileIndex + 1}/${totalTiles}...`);
-            onProgress(tileIndex / totalTiles * 100);
+            onProgress((tileIndex / totalTiles) * 100);
 
             const north = fullBounds.getNorth() + (tileLat * y);
             const west = fullBounds.getWest() + (tileLng * x);
@@ -171,8 +165,41 @@ async function renderHighResolutionTiles(map, exportData, onProgress) {
             }
         }
     }
-    onProgress(100);
     return renderedTiles;
+}
+
+async function assembleTilesToFinalImage(exportData) {
+    const { renderedTiles, pdfDimensions } = exportData;
+    const GRID_DIVISIONS = 2; 
+
+    const finalCanvas = document.createElement('canvas');
+    finalCanvas.width = pdfDimensions.width;
+    finalCanvas.height = pdfDimensions.height;
+    const ctx = finalCanvas.getContext('2d');
+
+    const tilePixelWidth = Math.round(pdfDimensions.width / GRID_DIVISIONS);
+    const tilePixelHeight = Math.round(pdfDimensions.height / GRID_DIVISIONS);
+
+    const drawPromises = renderedTiles.map(tile => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const dx = tile.x * tilePixelWidth;
+                const dy = tile.y * tilePixelHeight;
+                ctx.drawImage(img, dx, dy, tilePixelWidth, tilePixelHeight);
+                resolve();
+            };
+            img.onerror = (err) => {
+                console.error(`Ошибка загрузки изображения для тайла ${tile.x},${tile.y}`);
+                reject(err);
+            };
+            img.src = tile.dataUrl;
+        });
+    });
+
+    await Promise.all(drawPromises);
+
+    return finalCanvas.toDataURL('image/png');
 }
 
 
@@ -194,7 +221,7 @@ export async function preparePdfExportData(get, onProgress) {
     
     onProgress(5);
 
-    const dpi = 150;
+    const dpi = 300; // <--- ИЗМЕНЕНО НА 300 (КОМПРОМИСС)
     const a0_width_inches = 33.1;
     const a0_height_inches = 46.8;
     const pdfDimensions = {
@@ -217,19 +244,22 @@ export async function preparePdfExportData(get, onProgress) {
         styleSettings: styleSettings,
         objects: visibleObjects,
         pdfDimensions: pdfDimensions,
-        dpi: dpi, // <--- ДОБАВЛЕНО DPI
+        dpi: dpi,
     };
     
-    console.log("Шаг 2: Рендеринг тайлов карты...");
-    onProgress(10);
-
+    console.log(`Шаг 2: Рендеринг тайлов карты (4 шт.) при ${dpi} DPI...`);
     const tiles = await renderHighResolutionTiles(map, exportData, (p) => onProgress(10 + p * 0.8));
-    
     exportData.renderedTiles = tiles;
+    onProgress(90);
 
-    console.log("Шаг 3: Данные и тайлы карты готовы!");
-    console.log("PDF Export Data Prepared:", exportData);
-    alert('Снимки тайлов с масштабируемыми шрифтами созданы.');
+    console.log("Шаг 3: Сборка итогового изображения...");
+    const finalImage = await assembleTilesToFinalImage(exportData);
+    exportData.finalImage = finalImage;
+    onProgress(95);
+
+    console.log("Шаг 4: Данные и финальное изображение готовы!");
+    console.log("Готовое изображение (Data URL):", exportData.finalImage);
+    alert('Финальное изображение успешно собрано и выведено в консоль в виде Data URL.');
     onProgress(100);
 
     return exportData;
