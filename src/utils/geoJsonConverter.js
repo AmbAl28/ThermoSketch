@@ -14,6 +14,15 @@ const convertNodeToFeature = (node) => {
       elevation: node.elevation,
       heatLoad: node.heatLoad,
       contractNumber: node.contractNumber,
+      address: node.address,
+      objectPurpose: node.objectPurpose,
+      volumeM3: node.volumeM3,
+      areaM2: node.areaM2,
+      contractedHeatLoadGcalHour: node.contractedHeatLoadGcalHour,
+      calculatedHeatLoadGcalHour: node.calculatedHeatLoadGcalHour,
+      specificHeatingLoadKcalM3C: node.specificHeatingLoadKcalM3C,
+      legalForm: node.legalForm,
+      accruals: node.accruals,
     },
   };
 };

@@ -2,7 +2,27 @@ import React, { useRef } from 'react';
 import useStore from '../useStore';
 
 const hydrateNode = (node) => {
-  const defaultNode = { name: 'Узел', type: 'node', nodeType: 'chamber', elevation: 0, contractNumber: '', note: '', heatLoad: '', staticPressure: '', supplyTemperature: '', returnTemperature: '' };
+  const defaultNode = { 
+    name: 'Узел', 
+    type: 'node', 
+    nodeType: 'chamber', 
+    elevation: 0, 
+    contractNumber: '', 
+    note: '', 
+    heatLoad: '', 
+    staticPressure: '', 
+    supplyTemperature: '', 
+    returnTemperature: '',
+    address: '',
+    objectPurpose: '',
+    legalForm: '',
+    accruals: '',
+    volumeM3: '',
+    areaM2: '',
+    contractedHeatLoadGcalHour: '',
+    calculatedHeatLoadGcalHour: '',
+    specificHeatingLoadKcalM3C: ''
+  };
   return { ...defaultNode, ...node };
 };
 

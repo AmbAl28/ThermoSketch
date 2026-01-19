@@ -1,5 +1,6 @@
 
 import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 
 // --- Утилиты для проверки видимости (остаются без изменений) ---
 function isPointInBounds(point, bounds) {
@@ -135,6 +136,57 @@ async function generatePdfDocument(exportData) {
             }
         });
     }
+
+    // Add a new page for the table
+    pdf.addPage();
+
+    // Add a title to the table
+    pdf.setFontSize(16);
+    pdf.text("Свойства узлов", 14, 20);
+
+    // Define the columns for the table
+    const columns = [
+        { header: 'Наименование', dataKey: 'name' },
+        { header: 'Адрес', dataKey: 'address' },
+        { header: 'Назначение объекта', dataKey: 'objectPurpose' },
+        { header: 'Юр. форма лица', dataKey: 'legalForm' },
+        { header: 'Начисления', dataKey: 'accruals' },
+        { header: 'Объём, м3', dataKey: 'volumeM3' },
+        { header: 'Площадь, м2', dataKey: 'areaM2' },
+        { header: 'Тепловая нагрузка из договора (макс), Гкал/час', dataKey: 'contractedHeatLoadGcalHour' },
+        { header: 'Тепловая нагрузка расчётная (макс), Гкал/час', dataKey: 'calculatedHeatLoadGcalHour' },
+        { header: 'Удельная отопительная нагрузка, ккал/м3*С', dataKey: 'specificHeatingLoadKcalM3C' },
+    ];
+
+    // Map the node data to the table format
+    const body = objects.nodes.map(node => ({
+        name: node.name || '',
+        address: node.address || '',
+        objectPurpose: node.objectPurpose || '',
+        legalForm: node.legalForm || '',
+        accruals: node.accruals || '',
+        volumeM3: node.volumeM3 || '',
+        areaM2: node.areaM2 || '',
+        contractedHeatLoadGcalHour: node.contractedHeatLoadGcalHour || '',
+        calculatedHeatLoadGcalHour: node.calculatedHeatLoadGcalHour || '',
+        specificHeatingLoadKcalM3C: node.specificHeatingLoadKcalM3C || '',
+    }));
+
+    // Add the table to the PDF
+    pdf.autoTable({
+        head: [columns.map(c => c.header)],
+        body: body.map(row => columns.map(c => row[c.dataKey])),
+        startY: 30,
+        styles: {
+            fontSize: 8,
+            cellPadding: 2,
+        },
+        headStyles: {
+            fillColor: [22, 160, 133],
+            textColor: 255,
+            fontStyle: 'bold',
+        },
+    });
     
     pdf.save('ThermoSketch-Export-A0.pdf');
 }

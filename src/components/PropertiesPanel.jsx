@@ -134,7 +134,8 @@ const PropertiesPanel = () => {
       const { name, value } = e.target;
       const isNumericField = [
         'elevation', 'diameter', 'length', 'actualLength', 'insulationWear',
-        'heatLoad', 'staticPressure', 'supplyTemperature', 'returnTemperature'
+        'heatLoad', 'staticPressure', 'supplyTemperature', 'returnTemperature',
+        'volumeM3', 'areaM2', 'contractedHeatLoadGcalHour', 'calculatedHeatLoadGcalHour', 'specificHeatingLoadKcalM3C'
       ].includes(name);
 
       const updatedValue = isNumericField && value !== '' ? parseFloat(value) : value;
@@ -150,6 +151,43 @@ const PropertiesPanel = () => {
       <>
         <label htmlFor="name">Наименование</label>
         <input type="text" id="name" name="name" value={data.name || ''} onChange={handleChange} placeholder="Введите наименование" />
+        
+        <label htmlFor="address">Адрес</label>
+        <input type="text" id="address" name="address" value={data.address || ''} onChange={handleChange} placeholder="Введите адрес" />
+
+        <label htmlFor="objectPurpose">Назначение объекта</label>
+        <input type="text" id="objectPurpose" name="objectPurpose" value={data.objectPurpose || ''} onChange={handleChange} placeholder="Введите назначение объекта" />
+
+        <label htmlFor="legalForm">Юр. форма лица</label>
+        <select id="legalForm" name="legalForm" value={data.legalForm || ''} onChange={handleChange}>
+          <option value="">-- не указано --</option>
+          <option value="Физ. лицо">Физ. лицо</option>
+          <option value="Юр. лицо">Юр. лицо</option>
+          <option value="Муниципального образования">Муниципального образования</option>
+        </select>
+
+        <label htmlFor="accruals">Начисления</label>
+        <select id="accruals" name="accruals" value={data.accruals || ''} onChange={handleChange}>
+          <option value="">-- не указано --</option>
+          <option value="Счётчик">Счётчик</option>
+          <option value="Нормотив">Нормотив</option>
+        </select>
+
+        <label htmlFor="volumeM3">Объём, м3</label>
+        <input type="number" id="volumeM3" name="volumeM3" value={data.volumeM3 || ''} onChange={handleChange} placeholder="Не задан" step="0.01" />
+
+        <label htmlFor="areaM2">Площадь, м2</label>
+        <input type="number" id="areaM2" name="areaM2" value={data.areaM2 || ''} onChange={handleChange} placeholder="Не задана" step="0.01" />
+
+        <label htmlFor="contractedHeatLoadGcalHour">Тепловая нагрузка из договора (макс), Гкал/час</label>
+        <input type="number" id="contractedHeatLoadGcalHour" name="contractedHeatLoadGcalHour" value={data.contractedHeatLoadGcalHour || ''} onChange={handleChange} placeholder="Не задана" step="0.01" />
+
+        <label htmlFor="calculatedHeatLoadGcalHour">Тепловая нагрузка расчётная (макс), Гкал/час</label>
+        <input type="number" id="calculatedHeatLoadGcalHour" name="calculatedHeatLoadGcalHour" value={data.calculatedHeatLoadGcalHour || ''} onChange={handleChange} placeholder="Не задана" step="0.01" />
+
+        <label htmlFor="specificHeatingLoadKcalM3C">Удельная отопительная нагрузка, ккал/м3*С</label>
+        <input type="number" id="specificHeatingLoadKcalM3C" name="specificHeatingLoadKcalM3C" value={data.specificHeatingLoadKcalM3C || ''} onChange={handleChange} placeholder="Не задана" step="0.01" />
+
         <label htmlFor="nodeType">Тип узла</label>
         <select id="nodeType" name="nodeType" value={data.nodeType || 'chamber'} onChange={handleChange}>
           <option value="consumer">Потребитель</option>

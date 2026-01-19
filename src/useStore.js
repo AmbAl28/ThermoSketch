@@ -154,7 +154,16 @@ const useStore = create(
               staticPressure: '',
               supplyTemperature: '',
               returnTemperature: '',
-              areaId: assignedAreaId, 
+              areaId: assignedAreaId,
+              address: '',
+              objectPurpose: '',
+              volumeM3: '',
+              areaM2: '',
+              contractedHeatLoadGcalHour: '',
+              calculatedHeatLoadGcalHour: '',
+              specificHeatingLoadKcalM3C: '',
+              legalForm: 'Физ. лицо',
+              accruals: 'Нормотив',
             }
           ]
         }));
