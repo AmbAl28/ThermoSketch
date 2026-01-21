@@ -44,7 +44,6 @@ const getMarkerIcon = (nodeType, isMoving, isSelected, isHovered, isEditing, for
     display: flex;
     justify-content: center;
     align-items: center;
-    border: 1.5px solid #fff;
     transition: width 0.15s ease-in-out, height 0.15s ease-in-out;
   `;
 
