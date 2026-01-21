@@ -12,11 +12,9 @@ const NODE_TYPE_TRANSLATIONS = {
   diameter_change: 'Смена диаметра'
 };
 
-const getFontSize = (zoom) => {
+const getFontSize = (zoom, baseFontSize) => {
   if (zoom < 13) return 0;
-  const baseFontSize = 10;
-  const fontSize = baseFontSize + (zoom - 14);
-  return Math.max(8, Math.min(18, fontSize));
+  return baseFontSize;
 };
 
 const createAnnotationIcon = (content, fontSize, positionClass) => {
@@ -62,11 +60,19 @@ const AnnotationLayer = () => {
   const annotations = useMemo(() => {
     if (!viewOptions.showAnnotations) return [];
 
-    const currentFontSize = getFontSize(mapState.zoom);
+    const currentFontSize = getFontSize(mapState.zoom, viewOptions.fontSize);
     if (currentFontSize === 0) return [];
 
     const occupiedRects = [];
     const annotationData = [];
+    
+    const calculateHeight = (lineCount, fontSize) => {
+        if (lineCount === 0) return 0;
+        // Оценка высоты: ~1.2 * размер шрифта для высоты строки + небольшой отступ
+        const lineHeight = fontSize * 1.2;
+        const padding = 8;
+        return (lineCount * lineHeight) + padding;
+    }
 
     nodes.forEach(node => {
         const point = map.latLngToContainerPoint([node.lat, node.lng]);
@@ -90,11 +96,8 @@ const AnnotationLayer = () => {
             const content = contentParts.join('<br>');
 
             if (!content) return null;
-
-            let height = 0;
-            if (contentParts.length > 0) {
-                height = 20 + (contentParts.length - 1) * 15; // 20px for 1 line, +15 for each extra
-            }
+            
+            const height = calculateHeight(contentParts.length, currentFontSize);
 
             return {
               id: `node-${node.id}`,
@@ -125,10 +128,7 @@ const AnnotationLayer = () => {
           const p2 = map.latLngToContainerPoint(pipe.vertices[midIndex + 1]);
           const midPointLatLng = map.containerPointToLatLng(p1.add(p2).divideBy(2));
           
-          let height = 0;
-          if (contentParts.length > 0) {
-              height = 20 + (contentParts.length - 1) * 15;
-          }
+          const height = calculateHeight(contentParts.length, currentFontSize);
 
           return {
             id: `pipe-${pipe.id}`,
@@ -182,7 +182,7 @@ const AnnotationLayer = () => {
         <Marker
           key={anno.id}
           position={anno.latlng}
-          icon={createAnnotationIcon(anno.content, getFontSize(mapState.zoom), anno.positionClass)}
+          icon={createAnnotationIcon(anno.content, getFontSize(mapState.zoom, viewOptions.fontSize), anno.positionClass)}
           interactive={false}
         />
       ))}

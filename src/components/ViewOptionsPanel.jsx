@@ -31,6 +31,19 @@ const ViewOptionsPanel = () => {
     setViewOptions({ hiddenAnnotationNodeTypes: newHiddenTypes });
   };
 
+  const handleFontSizeChange = (e) => {
+    const value = e.target.value;
+    if (value === '') {
+        setViewOptions({ fontSize: '' });
+        return;
+    }
+    const newSize = parseInt(value, 10);
+    if (!isNaN(newSize)) {
+      const clampedSize = Math.max(5, Math.min(24, newSize));
+      setViewOptions({ fontSize: clampedSize });
+    }
+  };
+
   // Закрытие меню по клику вне его
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -49,6 +62,20 @@ const ViewOptionsPanel = () => {
       </button>
       {isOpen && (
         <div className="dropdown-menu">
+          <div className="dropdown-item-input" style={{ padding: '8px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label htmlFor="font-size-input">Размер шрифта:</label>
+            <input
+              id="font-size-input"
+              type="number"
+              min="5"
+              max="24"
+              value={viewOptions.fontSize}
+              onChange={handleFontSizeChange}
+              style={{ width: '60px', textAlign: 'center' }}
+            />
+          </div>
+          <div className="dropdown-separator"></div>
+
           <div className="dropdown-item-checkbox">
             <label>
               <input

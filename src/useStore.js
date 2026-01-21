@@ -115,6 +115,7 @@ const useStore = create(
         showPipeDiameter: true,
         hiddenAnnotationNodeTypes: [], // e.g. ['valve', 'chamber']
         forceLargeNodes: false,
+        fontSize: 12,
       },
 
       // --- Существующие actions ---
