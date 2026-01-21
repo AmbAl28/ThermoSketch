@@ -23,16 +23,16 @@ const NODE_TYPE_TRANSLATIONS = {
     diameter_change: 'Смена диаметра'
 };
 
-const getMarkerIcon = (nodeType, isMoving, isSelected, isHovered, isEditing, forceLarge) => {
+const getMarkerIcon = (nodeType, isMoving, isSelected, isHovered, isEditing, size) => {
   const config = nodeIconConfig[nodeType] || nodeIconConfig.default;
-  const isEnlarged = forceLarge || isMoving || isSelected || isHovered || isEditing;
-  const size = isEnlarged ? 26 : 10;
-  
+  const isInteractive = isMoving || isSelected || isHovered || isEditing;
+  const showEmoji = isInteractive || size > 10;
+
   const emojiStyle = `
-    font-size: 14px;
+    font-size: ${size * 0.6}px;
     color: white;
-    opacity: ${isEnlarged ? 1 : 0};
-    transform: scale(${isEnlarged ? 1 : 0.4});
+    opacity: ${showEmoji ? 1 : 0};
+    transform: scale(${showEmoji ? 1 : 0.4});
     transition: opacity 0.1s ease-out, transform 0.15s ease-out;
   `;
 
@@ -138,7 +138,7 @@ const Map = ({ drawingMode, setDrawingMode, children }) => {
           <Marker 
             key={node.id} 
             position={[node.lat, node.lng]} 
-            icon={getMarkerIcon(node.nodeType, node.id === movingNodeId, isSelected, isHovered, isEditing, viewOptions.forceLargeNodes)}
+            icon={getMarkerIcon(node.nodeType, node.id === movingNodeId, isSelected, isHovered, isEditing, viewOptions.nodeSize)}
             eventHandlers={{ click: (e) => {
               L.DomEvent.stopPropagation(e);
               if (drawingMode === 'pipe') {

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import useStore from '../useStore';
-import './DropdownMenu.css'; // Используем тот же стиль, что и у Operations
+import './DropdownMenu.css'; 
 
 const NODE_TYPE_TRANSLATIONS = {
   source: 'Источники',
@@ -23,6 +23,10 @@ const ViewOptionsPanel = () => {
     setViewOptions({ [option]: !viewOptions[option] });
   };
 
+  const handleSliderChange = (option, value) => {
+    setViewOptions({ [option]: parseInt(value, 10) });
+  };
+
   const handleNodeTypeToggle = (nodeType) => {
     const { hiddenAnnotationNodeTypes } = viewOptions;
     const newHiddenTypes = hiddenAnnotationNodeTypes.includes(nodeType)
@@ -31,20 +35,6 @@ const ViewOptionsPanel = () => {
     setViewOptions({ hiddenAnnotationNodeTypes: newHiddenTypes });
   };
 
-  const handleFontSizeChange = (e) => {
-    const value = e.target.value;
-    if (value === '') {
-        setViewOptions({ fontSize: '' });
-        return;
-    }
-    const newSize = parseInt(value, 10);
-    if (!isNaN(newSize)) {
-      const clampedSize = Math.max(5, Math.min(24, newSize));
-      setViewOptions({ fontSize: clampedSize });
-    }
-  };
-
-  // Закрытие меню по клику вне его
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -62,16 +52,27 @@ const ViewOptionsPanel = () => {
       </button>
       {isOpen && (
         <div className="dropdown-menu">
-          <div className="dropdown-item-input" style={{ padding: '8px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label htmlFor="font-size-input">Размер шрифта:</label>
+          <div className="dropdown-item-slider">
+            <label htmlFor="font-size-slider">Размер шрифта: {viewOptions.fontSize}px</label>
             <input
-              id="font-size-input"
-              type="number"
+              id="font-size-slider"
+              type="range"
               min="5"
               max="24"
               value={viewOptions.fontSize}
-              onChange={handleFontSizeChange}
-              style={{ width: '60px', textAlign: 'center' }}
+              onChange={(e) => handleSliderChange('fontSize', e.target.value)}
+            />
+          </div>
+
+          <div className="dropdown-item-slider">
+            <label htmlFor="node-size-slider">Размер узлов: {viewOptions.nodeSize}px</label>
+            <input
+              id="node-size-slider"
+              type="range"
+              min="2"
+              max="26"
+              value={viewOptions.nodeSize}
+              onChange={(e) => handleSliderChange('nodeSize', e.target.value)}
             />
           </div>
           <div className="dropdown-separator"></div>
@@ -181,17 +182,6 @@ const ViewOptionsPanel = () => {
           )}
           
           <div className="dropdown-separator"></div>
-
-          <div className="dropdown-item-checkbox">
-            <label>
-              <input
-                type="checkbox"
-                checked={viewOptions.forceLargeNodes}
-                onChange={() => handleCheckboxChange('forceLargeNodes')}
-              />
-              Увеличенные значки узлов
-            </label>
-          </div>
 
           <div className="dropdown-item-checkbox">
             <label>
