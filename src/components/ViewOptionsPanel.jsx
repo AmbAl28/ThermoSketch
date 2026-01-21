@@ -193,6 +193,17 @@ const ViewOptionsPanel = () => {
             </label>
           </div>
 
+          <div className="dropdown-item-checkbox">
+            <label>
+              <input
+                type="checkbox"
+                checked={viewOptions.usePipeDiameterForWidth}
+                onChange={() => handleCheckboxChange('usePipeDiameterForWidth')}
+              />
+              Трубы по диаметру
+            </label>
+          </div>
+
         </div>
       )}
     </div>

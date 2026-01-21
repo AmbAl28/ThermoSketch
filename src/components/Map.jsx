@@ -23,10 +23,8 @@ const NODE_TYPE_TRANSLATIONS = {
     diameter_change: 'Смена диаметра'
 };
 
-// --- Функция getMarkerIcon изменена ---
 const getMarkerIcon = (nodeType, isMoving, isSelected, isHovered, isEditing, forceLarge) => {
   const config = nodeIconConfig[nodeType] || nodeIconConfig.default;
-  // Теперь isEnlarged зависит и от forceLarge
   const isEnlarged = forceLarge || isMoving || isSelected || isHovered || isEditing;
   const size = isEnlarged ? 26 : 10;
   
@@ -61,6 +59,27 @@ const getMarkerIcon = (nodeType, isMoving, isSelected, isHovered, isEditing, for
   });
 };
 
+const getPipeWeight = (pipe, useDiameterForWidth) => {
+  const defaultWeight = 5;
+  if (!useDiameterForWidth) {
+    return defaultWeight;
+  }
+
+  const diameter = pipe.diameter;
+  if (!diameter || diameter <= 0) {
+    return 1; // Минимальная толщина для труб без диаметра
+  }
+  
+  const minDiameter = 25;  
+  const maxDiameter = 1000; 
+  const minWeight = 2;   
+  const maxWeight = 15;  
+
+  const weight = minWeight + ((diameter - minDiameter) / (maxDiameter - minDiameter)) * (maxWeight - minWeight);
+
+  return Math.max(minWeight, Math.min(weight, maxWeight));
+};
+
 const MouseProximityHandler = ({ setHoveredNodeId }) => {
   const { nodes } = useStore();
   const map = useMap();
@@ -91,7 +110,7 @@ const Map = ({ drawingMode, setDrawingMode, children }) => {
     nodes, pipes, selectedObject, setSelectedObject, movingNodeId,
     editingPipeId, selectedVertexIndex, setSelectedVertexIndex,
     updatePipeEndpoint, isDrawing, startDrawing, finishDrawing,
-    viewOptions // <-- Получаем viewOptions из стора
+    viewOptions
   } = useStore(state => state);
 
   const [hoveredNodeId, setHoveredNodeId] = useState(null);
@@ -105,9 +124,12 @@ const Map = ({ drawingMode, setDrawingMode, children }) => {
       <DrawingHandler drawingMode={drawingMode} setDrawingMode={setDrawingMode} />
       <MouseProximityHandler setHoveredNodeId={setHoveredNodeId} />
       
-      {pipes.map(pipe => (
-          pipe.id !== editingPipeId && <Polyline key={pipe.id} positions={pipe.vertices} pathOptions={{ color: '#3388ff', weight: 5 }} eventHandlers={{ click: (e) => { if (!movingNodeId && !editingPipeId && !isDrawing) { L.DomEvent.stopPropagation(e); setSelectedObject({ id: pipe.id, type: 'pipe' }); }}}} />
-      ))}
+      {pipes.map(pipe => {
+          const weight = getPipeWeight(pipe, viewOptions.usePipeDiameterForWidth);
+          return (
+            pipe.id !== editingPipeId && <Polyline key={pipe.id} positions={pipe.vertices} pathOptions={{ color: '#3388ff', weight: weight }} eventHandlers={{ click: (e) => { if (!movingNodeId && !editingPipeId && !isDrawing) { L.DomEvent.stopPropagation(e); setSelectedObject({ id: pipe.id, type: 'pipe' }); }}}} />
+          )
+      })}
 
       {nodes.map(node => {
         const isSelected = selectedObject?.id === node.id;
@@ -118,7 +140,6 @@ const Map = ({ drawingMode, setDrawingMode, children }) => {
           <Marker 
             key={node.id} 
             position={[node.lat, node.lng]} 
-            // Передаем forceLargeNodes в функцию
             icon={getMarkerIcon(node.nodeType, node.id === movingNodeId, isSelected, isHovered, isEditing, viewOptions.forceLargeNodes)}
             eventHandlers={{ click: (e) => {
               L.DomEvent.stopPropagation(e);
