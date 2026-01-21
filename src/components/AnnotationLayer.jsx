@@ -20,7 +20,7 @@ const getFontSize = (zoom) => {
 };
 
 const createAnnotationIcon = (content, fontSize, positionClass) => {
-  if (fontSize === 0) {
+  if (fontSize === 0 || !content) {
     return L.divIcon({ className: 'leaflet-annotation-icon-hidden' });
   }
 
@@ -49,7 +49,7 @@ const ANCHOR_POSITIONS = {
 const POSITION_CLASSES = Object.keys(ANCHOR_POSITIONS);
 
 const AnnotationLayer = () => {
-  const { nodes, pipes, viewOptions } = useStore(); // <-- Получаем viewOptions
+  const { nodes, pipes, viewOptions } = useStore();
   const map = useMap();
 
   const [mapState, setMapState] = useState({ zoom: map.getZoom(), center: map.getCenter() });
@@ -60,7 +60,6 @@ const AnnotationLayer = () => {
   });
 
   const annotations = useMemo(() => {
-    // <-- Глобальная проверка видимости сносок
     if (!viewOptions.showAnnotations) return [];
 
     const currentFontSize = getFontSize(mapState.zoom);
@@ -77,32 +76,65 @@ const AnnotationLayer = () => {
         });
     });
     
-    // Фильтруем сноски узлов
     const nodeAnnotations = viewOptions.showNodeAnnotations
       ? nodes
           .filter(node => !viewOptions.hiddenAnnotationNodeTypes.includes(node.nodeType))
-          .map(node => ({
-            id: `node-${node.id}`,
-            latlng: [node.lat, node.lng],
-            content: `<b>${node.name || 'Без имени'}</b><br>${NODE_TYPE_TRANSLATIONS[node.nodeType] || 'Неизвестный'}`,
-            size: { width: 120, height: 35 }
-          }))
+          .map(node => {
+            const namePart = viewOptions.showNodeNames ? `<b>${node.name || 'Без имени'}</b>` : '';
+            const nodeTypeText = NODE_TYPE_TRANSLATIONS[node.nodeType] || 'Неизвестный';
+            const typePart = viewOptions.showNodeTypes ? nodeTypeText : '';
+
+            const contentParts = [];
+            if (namePart) contentParts.push(namePart);
+            if (typePart) contentParts.push(typePart);
+            const content = contentParts.join('<br>');
+
+            if (!content) return null;
+
+            let height = 0;
+            if (contentParts.length > 0) {
+                height = 20 + (contentParts.length - 1) * 15; // 20px for 1 line, +15 for each extra
+            }
+
+            return {
+              id: `node-${node.id}`,
+              latlng: [node.lat, node.lng],
+              content: content,
+              size: { width: 120, height: height }
+            };
+          })
+          .filter(Boolean) // Remove nulls
       : [];
 
-    // Фильтруем сноски труб
     const pipeAnnotations = viewOptions.showPipeAnnotations
       ? pipes.map(pipe => {
           if (pipe.vertices.length < 2) return null;
+          
+          const lengthPart = viewOptions.showPipeLength ? `${pipe.length ? pipe.length + ' м' : 'N/A'}` : '';
+          const diameterPart = viewOptions.showPipeDiameter ? `${pipe.diameter ? 'Ø' + pipe.diameter + ' мм' : 'N/A'}` : '';
+
+          const contentParts = [];
+          if (lengthPart) contentParts.push(lengthPart);
+          if (diameterPart) contentParts.push(diameterPart);
+          const content = contentParts.join('<br>');
+          
+          if (!content) return null;
+
           const midIndex = Math.floor((pipe.vertices.length - 1) / 2);
           const p1 = map.latLngToContainerPoint(pipe.vertices[midIndex]);
           const p2 = map.latLngToContainerPoint(pipe.vertices[midIndex + 1]);
           const midPointLatLng = map.containerPointToLatLng(p1.add(p2).divideBy(2));
+          
+          let height = 0;
+          if (contentParts.length > 0) {
+              height = 20 + (contentParts.length - 1) * 15;
+          }
 
           return {
             id: `pipe-${pipe.id}`,
             latlng: midPointLatLng,
-            content: `${pipe.length ? pipe.length + ' м' : 'N/A'}<br>${pipe.diameter ? 'Ø' + pipe.diameter + ' мм' : 'N/A'}`,
-            size: { width: 100, height: 35 }
+            content: content,
+            size: { width: 100, height: height }
           }
         }).filter(Boolean)
       : [];
@@ -142,7 +174,7 @@ const AnnotationLayer = () => {
 
     return annotationData;
 
-  }, [mapState, nodes, pipes, map, viewOptions]); // <-- Добавляем viewOptions в зависимости
+  }, [mapState, nodes, pipes, map, viewOptions]);
 
   return (
     <>

@@ -109,6 +109,10 @@ const useStore = create(
         showAnnotations: true,
         showNodeAnnotations: true,
         showPipeAnnotations: true,
+        showNodeTypes: true,
+        showNodeNames: true,
+        showPipeLength: true,
+        showPipeDiameter: true,
         hiddenAnnotationNodeTypes: [], // e.g. ['valve', 'chamber']
         forceLargeNodes: false,
       },
@@ -162,8 +166,8 @@ const useStore = create(
               contractedHeatLoadGcalHour: '',
               calculatedHeatLoadGcalHour: '',
               specificHeatingLoadKcalM3C: '',
-              legalForm: 'Физ. лицо',
-              accruals: 'Нормотив',
+              legalForm: '',
+              accruals: '',
             }
           ]
         }));

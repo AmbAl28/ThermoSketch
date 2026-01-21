@@ -74,20 +74,44 @@ const ViewOptionsPanel = () => {
               </div>
 
               {viewOptions.showNodeAnnotations && (
-                <div className="sub-item-group">
-                  {allNodeTypes.map(type => (
-                    <div key={type} className="dropdown-item-checkbox sub-sub-item">
-                       <label>
-                         <input
-                           type="checkbox"
-                           checked={!viewOptions.hiddenAnnotationNodeTypes.includes(type)}
-                           onChange={() => handleNodeTypeToggle(type)}
-                         />
-                         {NODE_TYPE_TRANSLATIONS[type]}
-                       </label>
-                    </div>
-                  ))}
-                </div>
+                <>
+                  <div className="dropdown-item-checkbox sub-item" style={{ paddingLeft: '30px' }}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={viewOptions.showNodeNames}
+                        onChange={() => handleCheckboxChange('showNodeNames')}
+                      />
+                      Названия
+                    </label>
+                  </div>
+
+                  <div className="dropdown-item-checkbox sub-item" style={{ paddingLeft: '30px' }}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={viewOptions.showNodeTypes}
+                        onChange={() => handleCheckboxChange('showNodeTypes')}
+                      />
+                      Типы узлов
+                    </label>
+                  </div>
+
+                  <div className="sub-item-group">
+                    {allNodeTypes.map(type => (
+                      <div key={type} className="dropdown-item-checkbox sub-sub-item">
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={!viewOptions.hiddenAnnotationNodeTypes.includes(type)}
+                            onChange={() => handleNodeTypeToggle(type)}
+                          />
+                          {NODE_TYPE_TRANSLATIONS[type]}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
 
               <div className="dropdown-item-checkbox sub-item">
@@ -100,6 +124,32 @@ const ViewOptionsPanel = () => {
                   Сноски труб
                 </label>
               </div>
+
+              {viewOptions.showPipeAnnotations && (
+                <>
+                  <div className="dropdown-item-checkbox sub-item" style={{ paddingLeft: '30px' }}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={viewOptions.showPipeLength}
+                        onChange={() => handleCheckboxChange('showPipeLength')}
+                      />
+                      Протяженность
+                    </label>
+                  </div>
+
+                  <div className="dropdown-item-checkbox sub-item" style={{ paddingLeft: '30px' }}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={viewOptions.showPipeDiameter}
+                        onChange={() => handleCheckboxChange('showPipeDiameter')}
+                      />
+                      Диаметры
+                    </label>
+                  </div>
+                </>
+              )}
             </>
           )}
           
