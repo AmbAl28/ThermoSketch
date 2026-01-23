@@ -5,12 +5,15 @@ import Map from './components/Map';
 import DataDisplay from './components/DataDisplay';
 import PropertiesPanel from './components/PropertiesPanel';
 import OperationsMenu from './components/OperationsMenu';
-import ViewOptionsPanel from './components/ViewOptionsPanel'; // <-- Импорт нового компонента
+import ViewOptionsPanel from './components/ViewOptionsPanel';
 import AreaLayer from './components/AreaLayer';
 import MapEvents from './components/MapEvents';
+import SynologyImportModal from './components/SynologyImportModal'; // Импорт модального окна
 
 function App() {
   const [drawingMode, setDrawingMode] = useState('none');
+  const [isSynologyModalOpen, setIsSynologyModalOpen] = useState(false); // Состояние для модального окна
+
   const { 
     clearProject, 
     isPanelCollapsed, 
@@ -65,6 +68,10 @@ function App() {
     }
   };
 
+  // Функции для управления модальным окном
+  const handleOpenSynologyModal = () => setIsSynologyModalOpen(true);
+  const handleCloseSynologyModal = () => setIsSynologyModalOpen(false);
+
   return (
     <div className="App">
       <div className={`sidebar ${isPanelCollapsed ? 'collapsed' : ''}`}>
@@ -113,16 +120,17 @@ function App() {
         {!isPanelCollapsed && (
           <>
             <hr className="sidebar-divider" />
-            {/* Меню операций было здесь, теперь оно перемещено */}
             <PropertiesPanel />
             <DataDisplay />
           </>
         )}
       </div>
       <div className="map-container">
-        {/* --- НОВЫЙ КОНТЕЙНЕР ДЛЯ ОВЕРЛЕЕВ --- */}
         <div className="map-overlay-controls">
-          <OperationsMenu onClearProject={handleClearProject} />
+          <OperationsMenu 
+            onClearProject={handleClearProject} 
+            onSynologyImportClick={handleOpenSynologyModal} // Передаем функцию открытия
+          />
           <ViewOptionsPanel />
         </div>
         <Map drawingMode={drawingMode} setDrawingMode={setDrawingMode}>
@@ -130,6 +138,12 @@ function App() {
             <MapEvents setDrawingMode={setDrawingMode} />
         </Map>
       </div>
+
+      {/* Отображение модального окна */}
+      <SynologyImportModal 
+        isOpen={isSynologyModalOpen} 
+        onClose={handleCloseSynologyModal} 
+      />
     </div>
   );
 }

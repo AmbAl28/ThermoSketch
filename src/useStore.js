@@ -117,6 +117,7 @@ const useStore = create(
         fontSize: 12,
         usePipeDiameterForWidth: true,
         nodeSize: 10, 
+        synologyShareUrl: '', // <-- НОВОЕ ПОЛЕ
       },
 
       // --- Существующие actions ---
