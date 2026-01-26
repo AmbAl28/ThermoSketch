@@ -31,7 +31,7 @@ const hydratePipe = (pipe) => {
   return { ...defaultPipe, ...pipe };
 };
 
-const ImportButton = () => {
+const ImportButton = ({ children, onClose, className }) => { // <-- Добавляем className
   const { setNodes, setPipes, clearProject, setAreas } = useStore();
   const fileInputRef = useRef(null);
 
@@ -92,6 +92,10 @@ const ImportButton = () => {
         setPipes(hydratedPipes);
         alert('Проект успешно импортирован!');
 
+        if (onClose) {
+            onClose();
+        }
+
       } catch (error) {
         console.error("Ошибка импорта:", error);
         alert(`Ошибка импорта: ${error.message}`);
@@ -107,8 +111,9 @@ const ImportButton = () => {
 
   return (
     <>
-      <button className="import-btn" onClick={handleClick}>
-        Импорт JSON
+      {/* Объединяем классы, чтобы сделать кнопку кастомизируемой */}
+      <button className={`import-btn ${className || ''}`} onClick={handleClick}>
+        {children || 'Импорт JSON'} 
       </button>
       <input 
         type="file" 
