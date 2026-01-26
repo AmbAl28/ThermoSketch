@@ -17,7 +17,8 @@
   left: 50px; /* Отступ от контролов зума Leaflet (ширина ~30px + отступ 10px)*/
   z-index: 1000;
   display: flex;
-  align-items: flex-start; /* Выравнивание по верху */
+  flex-direction: column; /* ИЗМЕНЕНО: Располагаем элементы вертикально */
+  align-items: flex-start; /* Выравнивание по левому краю */
   gap: 10px;
 }
 

@@ -104,34 +104,34 @@ const useStore = create(
       drawingStartNodeId: null,
       drawingVertices: [],
       
-      // --- НОВОЕ: Настройки вида ---
+      // --- Настройки вида ---
       viewOptions: {
-        showAnnotations: true,
-        showNodeAnnotations: true,
-        showPipeAnnotations: true,
-        showNodeTypes: true,
-        showNodeNames: true,
-        showPipeLength: true,
-        showPipeDiameter: true,
-        hiddenAnnotationNodeTypes: [], // e.g. ['valve', 'chamber']
-        fontSize: 12,
-        usePipeDiameterForWidth: true,
-        nodeSize: 10, 
-        synologyShareUrl: '', // <-- НОВОЕ ПОЛЕ
+        showAnnotations: true,        // Показывать все сноски +
+        showNodeAnnotations: true,    // Сноски узлов +
+        showNodeNames: true,          // Названия +
+        showNodeTypes: false,         // Типы узлов -
+        hiddenAnnotationNodeTypes: [], // Скрытые типы узлов по умолчанию
+        showPipeAnnotations: true,    // Сноски труб +
+        showPipeLength: true,         // Протяженность +
+        showPipeDiameter: true,       // Диаметры +
+        usePipeDiameterForWidth: true, // Трубы по диаметру +
+        fontSize: 8,                  // Размер шрифта: 8px
+        nodeSize: 5,                  // Размер узлов: 5px
+        synologyShareUrl: '', 
       },
 
-      // --- Существующие actions ---
+      // --- Actions ---
+      setViewOptions: (options) => set(state => ({
+        viewOptions: { ...state.viewOptions, ...options }
+      })),
+
+      // ... (остальные actions без изменений)
+
       setNodes: (nodes) => set({ nodes }),
       setPipes: (pipes) => set({ pipes }),
       setAreas: (areas) => set({ areas }),
       setMovingNodeId: (nodeId) => set({ movingNodeId: nodeId }),
       setSelectedVertexIndex: (index) => set({ selectedVertexIndex: index }),
-      
-      // --- НОВОЕ: Action для обновления настроек вида ---
-      setViewOptions: (options) => set(state => ({
-        viewOptions: { ...state.viewOptions, ...options }
-      })),
-
       addNode: (node) => {
         const { areas } = get();
         let assignedAreaId = null;
@@ -428,24 +428,22 @@ const useStore = create(
     {
       name: 'thermal-network-storage',
       storage: createJSONStorage(() => safeJsonStorage),
-      // Добавляем viewOptions в сохраняемое состояние
       partialize: (state) => ({ 
           nodes: state.nodes, 
           pipes: state.pipes, 
           areas: state.areas,
           isPanelCollapsed: state.isPanelCollapsed,
-          viewOptions: state.viewOptions, // <-- СОХРАНЯЕМ НАСТРОЙКИ
+          viewOptions: state.viewOptions, 
         }),
       onRehydrateStorage: () => (state, error) => {
         if (state) {
-          // Сбрасываем состояния, которые не должны сохраняться
           state.isDrawing = false;
           state.drawingStartNodeId = null;
           state.drawingVertices = [];
           state.areaCreationMode = false;
           state.editingPipeId = null;
           state.editingMode = null;
-          state.map = null; // Не сохраняем объект карты
+          state.map = null; 
         }
       }
     }
